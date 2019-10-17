@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">VisionF SMMS</string>
+    <string name="usage_agreement_link">
+        <a href="https://dev.vizyonf.com">User Agreement</a>
+    </string>
+    <string name="usage_agreement_content">
+         linke tıklayarak kullanıcı sözleşmesini okuyarak onayladığınızı beyan ediniz
+    </string>
+    <string name="allow">Allow</string>
+    <string name="denny">Denny</string>
+</resources>

@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "1041210087509",
+    "firebase_url": "https://smmsandroid.firebaseio.com",
+    "project_id": "smmsandroid",
+    "storage_bucket": "smmsandroid.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1041210087509:android:2da8146876459407685cdc",
+        "android_client_info": {
+          "package_name": "com.shoppingmall.smms"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1041210087509-7mg6k8tffgi4348k84hhb22fh5a373oj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-VKHjibcTgmfC2XzrRpaXdk26IEQIpTg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1041210087509-7mg6k8tffgi4348k84hhb22fh5a373oj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
