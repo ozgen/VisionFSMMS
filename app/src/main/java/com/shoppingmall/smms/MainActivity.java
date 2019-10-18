@@ -40,16 +40,12 @@ public class MainActivity extends AppCompatActivity {
     protected static WebView webViewSMMS;
     protected static String userFCMToken = "";
     protected static String urlStr = "";
-    protected static String webSiteURL = "http://192.168.2.22:3000";
+    protected static String webSiteURL = "http://192.168.1.55:3000";
     protected static SwipeRefreshLayout swipeRefreshLayout;
     private ViewTreeObserver.OnScrollChangedListener myOnScrollChangedListener;
 
 
-    protected static final String JS_SETELEMENT_EMAIL = "javascript:window.actions.initLoginForAndroid(";
-
     protected static final String ELEMENTID_EMAIL = "email";
-
-    protected static final String JS_SETELEMENT_PASSWORD = "javascript:document.getElementById('passworduser').value='";
 
     protected static final String ELEMENTID_PASSWORD = "password";
 
