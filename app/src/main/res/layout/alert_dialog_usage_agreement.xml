@@ -21,5 +21,6 @@
         android:layout_height="wrap_content"
         android:clickable="true"
         android:text="@string/usage_agreement_link"
-        android:textSize="18sp" />
+        android:textSize="18sp"
+        android:focusable="true" />
 </LinearLayout>

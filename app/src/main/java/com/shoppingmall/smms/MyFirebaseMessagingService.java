@@ -13,10 +13,9 @@ import androidx.core.app.NotificationManagerCompat;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+import com.shoppingmall.smms.Helpers.NotificationHelper;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
-
-    protected static int notifyCounter = 0;
 
     @Override
     public void onNewToken(String token) {
@@ -56,6 +55,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 .build();
 
         NotificationManagerCompat manager = NotificationManagerCompat.from(getApplicationContext());
-        manager.notify(++MyFirebaseMessagingService.notifyCounter, notification);
+        manager.notify(NotificationHelper.getNotificationCount(), notification);
     }
 }

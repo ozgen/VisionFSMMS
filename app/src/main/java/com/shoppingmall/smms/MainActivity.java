@@ -1,7 +1,6 @@
 package com.shoppingmall.smms;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -12,9 +11,11 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.net.ConnectivityManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.method.LinkMovementMethod;
@@ -29,24 +30,32 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.InstanceIdResult;
+import com.shoppingmall.smms.Helpers.AuthHelper;
+import com.shoppingmall.smms.Helpers.FileHelper;
+import com.shoppingmall.smms.Helpers.NetworkHelper;
+import com.shoppingmall.smms.Models.ConnectionStatus;
 
 public class MainActivity extends AppCompatActivity {
 
     protected static WebView webViewSMMS;
-    protected static String userFCMToken = "";
     protected static String urlStr = "";
-    protected static String webSiteURL = "http://192.168.1.55:3000";
+    protected static String webSiteURL = "http://192.168.2.11:3000";
     protected static SwipeRefreshLayout swipeRefreshLayout;
     private ViewTreeObserver.OnScrollChangedListener myOnScrollChangedListener;
 
+    private static ConnectionStatus connectionStatus;
+    // The BroadcastReceiver that tracks network connectivity changes.
+    private NetworkReceiver receiver = new NetworkReceiver();
+    private Boolean isSendMacAddressSuccess = false;
 
+    protected static final String ELEMENTID_USERID = "userid";
     protected static final String ELEMENTID_EMAIL = "email";
-
     protected static final String ELEMENTID_PASSWORD = "password";
 
 
@@ -54,7 +63,27 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // TODO: Başka bir yolu var mı?
+        NetworkHelper.setContext(getApplicationContext());
+
         checkPermission();
+
+        // Fill User Credentials From Shared Preferences
+        SharedPreferences prefs = getSharedPreferences("com.shoppingmall.smms", Activity.MODE_PRIVATE);
+        String _userID = prefs.getString(ELEMENTID_USERID, "");
+        String _email = prefs.getString(ELEMENTID_EMAIL, "");
+        String _password = prefs.getString(ELEMENTID_PASSWORD, "");
+
+        if (!_userID.isEmpty() && !_email.isEmpty() && !_password.isEmpty()) {
+            AuthHelper.setUserID(_userID);
+            AuthHelper.setUserEmail(_email);
+            AuthHelper.setPassword(_password);
+
+            if (!AuthHelper.isLoggedIn()) {
+               AuthHelper.login();
+            }
+        }
 
         checkUsageAgreement();
 
@@ -64,11 +93,13 @@ public class MainActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<InstanceIdResult> task) {
                         if (!task.isSuccessful()) return;
 
-                        String token = task.getResult().getToken();
-                        MainActivity.userFCMToken = token;
+                        String fcmToken = task.getResult().getToken();
+                        AuthHelper.setFcmToken(fcmToken);
+                        AuthHelper.sendFCMTokenToServer();
                     }
                 });
 
+        initialSecurtyPersonelProcess();
         processIntent(getIntent());
         initialSwipeRefreshLayout();
         initialWebView();
@@ -116,16 +147,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public static void saveToken() {
-        MainActivity.evaluateJavascriptStr("window.actions.saveToken({deviceToken: \'" + MainActivity.userFCMToken + "\', oldToken: null});");
-    }
-
     public static void gotoURL(String url) {
-        if (url != null && !url.isEmpty()) {
-            MainActivity.evaluateJavascriptStr("document.location = \"" + url + "\";");
-        }
+        MainActivity.evaluateJavascriptStr("document.location = \"" + url + "\";");
     }
 
+    // TODO: Ne kadar gerekli ?
     public static void evaluateJavascriptStr(String evaluateString) {
         if ((evaluateString != null) && !evaluateString.isEmpty() && webViewSMMS != null) {
             final String finalEvaluateString = evaluateString;
@@ -175,6 +201,11 @@ public class MainActivity extends AppCompatActivity {
                     view.evaluateJavascript("javascript:window.actions.initLoginForAndroid('" + email+ "' , '"+ password +"') ; ", null);
                 }
 
+                String profilePageURL = webSiteURL + "/#/app/pages/user";
+                if (url.equals(profilePageURL)) {
+
+                }
+
             }
         });
 
@@ -192,7 +223,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
                 String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
-                webViewSMMS.loadUrl(WebAppInterface.getBase64StringFromBlobUrl(url, fileName, mimeType));
+                webViewSMMS.loadUrl(FileHelper.getBase64StringFromBlobUrl(url, fileName, mimeType));
             }
         });
 
@@ -323,5 +354,26 @@ public class MainActivity extends AppCompatActivity {
         builder.show();
     }
 
+    private void initialSecurtyPersonelProcess() {
+        // Registers BroadcastReceiver to track network connection changes.
+        IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+        receiver = new NetworkReceiver(this);
+        this.registerReceiver(receiver, filter);
 
+        NetworkReceiver.addConnectionTypeChangeListener(new RunnableArg<ConnectionStatus>() {
+            @Override
+            public void run() {
+                if (this.getArg() != null) {
+                    MainActivity.connectionStatus = this.getArg();
+                    if (connectionStatus.wifiConnected) {
+                        Toast.makeText(getApplicationContext(), String.format("Wifi -> %s", MainActivity.connectionStatus.SSID), Toast.LENGTH_SHORT).show();
+                    }
+                    Toast.makeText(getApplicationContext(), String.format("Wifi -> %b, BroadBand -> %b", MainActivity.connectionStatus.wifiConnected, MainActivity.connectionStatus.mobileConnected), Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        String macAddress = NetworkHelper.getMacAddr(this);
+        Toast.makeText(getApplicationContext(), macAddress, Toast.LENGTH_LONG).show();
+    }
 }
