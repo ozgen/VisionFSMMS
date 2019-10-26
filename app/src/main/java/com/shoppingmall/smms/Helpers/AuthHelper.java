@@ -5,7 +5,8 @@ import android.util.Log;
 import com.shoppingmall.smms.ApiClient;
 import com.shoppingmall.smms.Models.FCMToken;
 import com.shoppingmall.smms.Models.ResponseMessage;
-import com.shoppingmall.smms.Models.UserCard;
+import com.shoppingmall.smms.Models.StaffCard;
+import com.shoppingmall.smms.Models.User;
 import com.shoppingmall.smms.Models.UserLogin;
 import com.shoppingmall.smms.Models.UserLoginResult;
 import com.shoppingmall.smms.Models.UserMacAddress;
@@ -21,7 +22,7 @@ public class AuthHelper {
     private static String password;
     private static String apiToken;
     private static String fcmToken;
-    private static UserCard userCard;
+    private static User userInfo;
 
     private static boolean _isLoggedIn = false;
 
@@ -55,7 +56,7 @@ public class AuthHelper {
         AuthHelper.fcmToken = fcmToken;
     }
 
-    public static UserCard getUserCard() { return userCard; }
+    public static User getUserInfo() { return userInfo; }
 
     public static boolean login() {
         VisionfService visionfService = ApiClient.getClient();
@@ -72,7 +73,7 @@ public class AuthHelper {
                     AuthHelper.apiToken = apiResponse.token;
                     ApiClient.setAccessToken(AuthHelper.apiToken);
                     AuthHelper.sendFCMTokenToServer();
-                    AuthHelper.getStaffCardFromServer();
+                    AuthHelper.getUserDataFromServer();
                     return true;
                 }
             } catch (Exception ex) {
@@ -88,11 +89,11 @@ public class AuthHelper {
         if (fcmToken != null && _isLoggedIn) {
             VisionfService visionfService = ApiClient.getClient();
 
-            Call<ResponseMessage> callSync = visionfService.sendFCMTokenToServer(new FCMToken( userID, fcmToken, null));
+            Call<ResponseMessage<String>> callSync = visionfService.sendFCMTokenToServer(new FCMToken( userID, fcmToken, null));
 
             try {
-                Response<ResponseMessage> response = callSync.execute();
-                ResponseMessage apiResponse = response.body();
+                Response<ResponseMessage<String>> response = callSync.execute();
+                ResponseMessage<String> apiResponse = response.body();
 
                 if (response.code() == 200 && apiResponse != null) {
                     return true;
@@ -105,21 +106,71 @@ public class AuthHelper {
         return false;
     }
 
-    private static void getStaffCardFromServer() {
-        VisionfService _visionfService = ApiClient.getClient();
-        Call<UserCard> call = _visionfService.getUserPassCard(new UserMacAddress(userID, NetworkHelper.getMacAddr()));
-        call.enqueue(new Callback<UserCard>() {
-            @Override
-            public void onResponse(Call<UserCard> call, Response<UserCard> response) {
-                if (response.code() == 200) {
-                    userCard = response.body();
+    public static void getUserDataFromServer() {
+        if(!userID.isEmpty() && _isLoggedIn) {
+            VisionfService _visionfService = ApiClient.getClient();
+            Call<ResponseMessage<User>> call = _visionfService.getUserData(userID);
+
+            call.enqueue(new Callback<ResponseMessage<User>>() {
+                @Override
+                public void onResponse(Call<ResponseMessage<User>> call, Response<ResponseMessage<User>> response) {
+                    if (response.code() == 200) {
+                        ResponseMessage<User> res = response.body();
+                        if (res != null && res.success) {
+                            AuthHelper.userInfo = res.message;
+                        }
+                    }
                 }
-            }
 
-            @Override
-            public void onFailure(Call<UserCard> call, Throwable t) {
+                @Override
+                public void onFailure(Call<ResponseMessage<User>> call, Throwable t) {
 
+                }
+            });
+        }
+    }
+
+    public static StaffCard getStaffCardFromServer() {
+        VisionfService _visionfService = ApiClient.getClient();
+        Call<StaffCard> callSync = _visionfService.getUserPassCard(new UserMacAddress(userID, NetworkHelper.getMacAddr()));
+
+        try {
+            Response<StaffCard> response = callSync.execute();
+            StaffCard apiResponse = response.body();
+
+            if (response.code() == 200) {
+                return apiResponse;
             }
-        });
+        } catch (Exception ex) {
+            Log.e("AuthHelper", ex.getMessage() != null ? ex.getMessage() : "Null");
+        }
+
+        return null;
+    }
+
+    public static ResponseMessage<String> sendMacAddressToServer() {
+        String macAddr = NetworkHelper.getMacAddr();
+        if (_isLoggedIn && macAddr != null && !macAddr.isEmpty()) {
+            VisionfService _visionfService = ApiClient.getClient();
+            Call<ResponseMessage<String>> callSync = _visionfService.createMacAddress(new UserMacAddress(userID, macAddr));
+
+            try {
+                Response<ResponseMessage<String>> response = callSync.execute();
+                ResponseMessage<String> apiResponse = response.body();
+
+                if (apiResponse != null) {
+                    apiResponse.responseCode = response.code();
+                    return apiResponse;
+                }
+
+                if (response.code() == 404) {
+
+                }
+            } catch (Exception ex) {
+                Log.e("AuthHelper", ex.getMessage() != null ? ex.getMessage() : "Null");
+            }
+        }
+
+        return null;
     }
 }

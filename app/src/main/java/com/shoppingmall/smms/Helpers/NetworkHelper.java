@@ -87,7 +87,8 @@ public class NetworkHelper {
                 final String ssid = wifiInfo.getSSID();
                 final Integer ipAddress = wifiInfo.getIpAddress();
                 if (ssid != null) {
-                    _connectionStatus.SSID = ssid;
+                    String trimedSSID = ssid.replace("\"", "");
+                    _connectionStatus.SSID = trimedSSID;
                 }
                 if (ipAddress > 0) {
                     _connectionStatus.setIpAddress(ipAddress);

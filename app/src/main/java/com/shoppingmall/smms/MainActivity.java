@@ -1,5 +1,6 @@
 package com.shoppingmall.smms;
 
+import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -9,16 +10,21 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
+import android.provider.Settings;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.method.LinkMovementMethod;
+import android.util.Base64;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,6 +35,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,10 +43,15 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.InstanceIdResult;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.shoppingmall.smms.Helpers.AuthHelper;
 import com.shoppingmall.smms.Helpers.FileHelper;
 import com.shoppingmall.smms.Helpers.NetworkHelper;
+import com.shoppingmall.smms.Helpers.QRCodeHelper;
 import com.shoppingmall.smms.Models.ConnectionStatus;
+import com.shoppingmall.smms.Models.ResponseMessage;
+import com.shoppingmall.smms.Models.StaffCard;
+import com.shoppingmall.smms.Models.User;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -48,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     protected static String webSiteURL = "http://192.168.2.11:3000";
     protected static SwipeRefreshLayout swipeRefreshLayout;
     private ViewTreeObserver.OnScrollChangedListener myOnScrollChangedListener;
+    private static Context _mainContext;
 
     private static ConnectionStatus connectionStatus;
     // The BroadcastReceiver that tracks network connectivity changes.
@@ -63,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        _mainContext = this;
 
         // TODO: Başka bir yolu var mı?
         NetworkHelper.setContext(getApplicationContext());
@@ -203,7 +217,60 @@ public class MainActivity extends AppCompatActivity {
 
                 String profilePageURL = webSiteURL + "/#/app/pages/user";
                 if (url.equals(profilePageURL)) {
+                    User userInfo = AuthHelper.getUserInfo();
+                    if (userInfo.role.equals("SECURITY")) {
+                        if (connectionStatus.mobileConnected) {
+                            forceWifiConnection(getResources().getString(R.string.denymobileconnection));
+                        } else if (connectionStatus.wifiConnected) {
+                            // TODO: Loading Start
 
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    ResponseMessage<String> macRegisterRes = AuthHelper.sendMacAddressToServer();
+
+                                    if (macRegisterRes != null) {
+
+                                        switch (macRegisterRes.responseCode) {
+                                            case 200: // Mac adresi zaten bu kullanıcıya kayıtlı
+                                                StaffCard _staffCard = AuthHelper.getStaffCardFromServer();
+                                                if (_staffCard != null) {
+                                                    boolean checkSSID = false;
+                                                    for (String _ssid :_staffCard.acceptableSSIDs) {
+                                                        checkSSID |= _ssid.equals(connectionStatus.SSID);
+                                                    }
+
+                                                    if (checkSSID) {
+                                                        showStaffCard(_staffCard);
+                                                    } else {
+                                                        forceWifiConnection(getResources().getString(R.string.wrongwifiSSID));
+                                                    }
+                                                } else {
+
+                                                }
+                                                break;
+                                            case 201: // Yeni mac adresi ilk defa eklendi.
+                                                showStaticLayout(R.layout.staff_new_record);
+                                                break;
+                                            case 203: // TODO: Yetkisiz işlem - Farklı bir cihazdan giriş yapıldı
+                                                showStaticLayout(R.layout.staff_different_macaddress);
+                                                break;
+                                            case 404: // Hata Oluştu
+                                                break;
+                                            default: // Beklenmeyen Hata
+                                                break;
+                                        }
+                                    } else {
+                                        // Tekrar Dene
+                                    }
+                                }
+                            }).start();
+
+                            // TODO: Loading Stop
+                        } else { // İnternete çıkmak için aktif bağlantı yok
+                            // TODO: Bir diyalog penceresi ile uyarılmalı veya Ayarlara Yönlendirilmeli (Wifi Seçme Ekranına)
+                        }
+                    }
                 }
 
             }
@@ -375,5 +442,66 @@ public class MainActivity extends AppCompatActivity {
 
         String macAddress = NetworkHelper.getMacAddr(this);
         Toast.makeText(getApplicationContext(), macAddress, Toast.LENGTH_LONG).show();
+    }
+
+    private void showStaffCard(final StaffCard staffCard) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (connectionStatus != null) {
+                    if (connectionStatus.wifiConnected) {
+                        final Dialog staffCardDialog = new Dialog(_mainContext);
+                        staffCardDialog.setContentView(R.layout.personel_card);
+
+                        final ImageView staffImageView = staffCardDialog.findViewById(R.id.staffProfileImageViewer);
+                        final ImageView qrCodeViewer = staffCardDialog.findViewById(R.id.qrCodeImageView);
+
+                        final TextView staffNameAndSurname = staffCardDialog.findViewById(R.id.nameSurname);
+                        final TextView latestEntryDate = staffCardDialog.findViewById(R.id.lastEntryDate);
+                        final TextView cellPhone = staffCardDialog.findViewById(R.id.cellphone);
+
+                        staffNameAndSurname.setText(String.format("%s  %s", staffCard.name, staffCard.surname));
+                        latestEntryDate.setText(staffCard.latestEnrtyDate);
+                        cellPhone.setText(staffCard.phone);
+
+                        byte[] decodedString = Base64.decode(staffCard.Img.base64Data, Base64.DEFAULT);
+                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+                        staffImageView.setImageBitmap(decodedByte);
+
+                        Bitmap bitmap = QRCodeHelper
+                                .newInstance(_mainContext)
+                                .setContent(staffCard.QRCode)
+                                .setErrorCorrectionLevel(ErrorCorrectionLevel.Q)
+                                .setMargin(2)
+                                .getQRCOde();
+                        qrCodeViewer.setImageBitmap(bitmap);
+
+                        staffCardDialog.show();
+                    }
+                }
+            }
+        });
+    }
+
+    private void showStaticLayout(@LayoutRes final int layoutID) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                final Dialog staticContentDialog = new Dialog(_mainContext);
+                staticContentDialog.setContentView(layoutID);
+
+                staticContentDialog.show();
+            }
+        });
+    }
+
+    private void forceWifiConnection(final String toastMessage) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(_mainContext, toastMessage, Toast.LENGTH_LONG).show();
+                startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
+            }
+        });
     }
 }

@@ -25,8 +25,8 @@ public class QRCodeHelper {
      * private constructor of this class only access by stying in this class.
      */
     private QRCodeHelper(Context context) {
-        mHeight = (int) (context.getResources().getDisplayMetrics().heightPixels / 2.4);
-        mWidth = (int) (context.getResources().getDisplayMetrics().widthPixels / 1.3);
+        mHeight = (int) (context.getResources().getDisplayMetrics().heightPixels / 3.12);
+        mWidth = (int) (context.getResources().getDisplayMetrics().widthPixels / 1.69);
     }
     /**
      * This method is for singleton instance od this class.

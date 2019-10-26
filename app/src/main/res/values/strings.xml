@@ -8,4 +8,16 @@
     </string>
     <string name="allow">Allow</string>
     <string name="denny">Denny</string>
+    <string name="new_staff">
+        Merhaba \n Kullanmış olduğun bu cihaz, artık kimlik bilgilerinle eşleştirilmiş bulunmaktadır. Bundan sonra yalnızca bu cihaz üzerinden giriş yapmanız gerekmektedir.
+    </string>
+    <string name="different_macaddress">
+        Lütfen sistemde tanımlı olan mobil cihanız üzerinden sisteme giriş yapınız.
+    </string>
+    <string name="denymobileconnection">
+        Lütfen kart bilgilerini alabilmek için sizin için ayrılmış olan wifi noktasına bağlanın.
+    </string>
+    <string name="wrongwifiSSID">
+        Lütfen şuanda bağlı olduğunuz wifi noktasından ayrılarak, sizin için ayrılmış olan wifi noktasına bağlanınız
+    </string>
 </resources>
