@@ -1,15 +1,18 @@
 package com.shoppingmall.smms.Helpers;
 
+import android.content.Context;
 import android.util.Log;
 
 import com.shoppingmall.smms.ApiClient;
 import com.shoppingmall.smms.Models.FCMToken;
+import com.shoppingmall.smms.Models.InviteResponse;
 import com.shoppingmall.smms.Models.ResponseMessage;
 import com.shoppingmall.smms.Models.StaffCard;
 import com.shoppingmall.smms.Models.User;
 import com.shoppingmall.smms.Models.UserLogin;
 import com.shoppingmall.smms.Models.UserLoginResult;
 import com.shoppingmall.smms.Models.UserMacAddress;
+import com.shoppingmall.smms.RunnableArg;
 import com.shoppingmall.smms.VisionfService;
 
 import retrofit2.Call;
@@ -23,6 +26,7 @@ public class AuthHelper {
     private static String apiToken;
     private static String fcmToken;
     private static User userInfo;
+    private static String sessionInjectScript;
 
     private static boolean _isLoggedIn = false;
 
@@ -57,6 +61,14 @@ public class AuthHelper {
     }
 
     public static User getUserInfo() { return userInfo; }
+
+    public static String getSessionInjectScript() {
+        return sessionInjectScript;
+    }
+
+    public static void setSessionInjectScript(String sessionInjectScript) {
+        AuthHelper.sessionInjectScript = sessionInjectScript;
+    }
 
     public static boolean login() {
         VisionfService visionfService = ApiClient.getClient();
@@ -172,5 +184,31 @@ public class AuthHelper {
         }
 
         return null;
+    }
+
+    public static void sendInviteResponse(final Context context, final int notificationID, InviteResponse inviteReqObj, final RunnableArg<ResponseMessage<String>> runnableArg) {
+        VisionfService _visionfService = ApiClient.getClient();
+        Call<ResponseMessage<String>> call = _visionfService.sendInviteResponse(inviteReqObj);
+
+        call.enqueue(new Callback<ResponseMessage<String>>() {
+            @Override
+            public void onResponse(Call<ResponseMessage<String>> call, retrofit2.Response<ResponseMessage<String>> response) {
+                int responseCode = response.code();
+                if (responseCode == 200) {
+                    ResponseMessage<String> res = response.body();
+                    if (res != null && res.success) {
+                        runnableArg.run(res);
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseMessage<String>> call, Throwable t) {
+                ResponseMessage<String> responseMessage = new ResponseMessage<String>();
+                responseMessage.success = false;
+                responseMessage.message = t.getMessage();
+                runnableArg.run(responseMessage);
+            }
+        });
     }
 }

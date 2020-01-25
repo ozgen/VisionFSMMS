@@ -1,11 +1,5 @@
 <resources>
     <string name="app_name">VisionF SMMS</string>
-    <string name="usage_agreement_link">
-        <a href="https://dev.vizyonf.com">User Agreement</a>
-    </string>
-    <string name="usage_agreement_content">
-         linke tıklayarak kullanıcı sözleşmesini okuyarak onayladığınızı beyan ediniz
-    </string>
     <string name="allow">Allow</string>
     <string name="denny">Denny</string>
     <string name="new_staff">
@@ -20,4 +14,17 @@
     <string name="wrongwifiSSID">
         Lütfen şuanda bağlı olduğunuz wifi noktasından ayrılarak, sizin için ayrılmış olan wifi noktasına bağlanınız
     </string>
+    <string name="downloadFail">
+        Dosya indirme işlemi başarısız oldu.
+    </string>
+
+    <string name="inviteMessages_meetingType">Toplantı Tipi: </string>
+    <string name="inviteMessages_meetingSubject">Toplantı Konusu: </string>
+    <string name="inviteMessages_meetingLocation">Toplantı Konumu: </string>
+    <string name="inviteMessages_process">Sorumluluklar: \n</string>
+    <string name="inviteMessages_cancel">Toplantı İptal Edildi</string>
+    <string name="inviteMessages_edit">Toplantı Yeniden Düzenlendi</string>
+    <string name="inviteMessages_title">Toplantı Katılım Teyidi</string>
+    <string name="acceptinvite">Katılacağım</string>
+    <string name="notacceptinvite">Katılmayacağım</string>
 </resources>

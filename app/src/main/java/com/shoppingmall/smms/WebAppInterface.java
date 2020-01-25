@@ -51,8 +51,8 @@ public class WebAppInterface {
     }
 
     @JavascriptInterface
-    public void userLogoutHandler() {
-
+    public void userLogoutMessageHandler() {
+        clearStoredUserData();
     }
 
     @JavascriptInterface
@@ -78,16 +78,38 @@ public class WebAppInterface {
         }
     }
 
+    @JavascriptInterface
+    public void downloadFile(String url, String fileName, String isBase64File) {
+        if (isBase64File.equals("false")) {
+            if (!url.isEmpty() && !fileName.isEmpty()) {
+                FileHelper.saveFileFromUrl(url, fileName);
+            }
+        } else {
+            if (!url.isEmpty() && !fileName.isEmpty()) {
+                try {
+                    FileHelper.convertBase64StringToFileAndStoreIt(mContext, url, fileName, "");
+                } catch (IOException e) {
+                    // e.printStackTrace();
+                }
+            }
+        }
+    }
+
     // For Download
     @JavascriptInterface
     public void getBase64FromBlobData(String base64Data, String fileName, String mimeType) throws IOException {
         FileHelper.convertBase64StringToFileAndStoreIt(mContext, base64Data, fileName, mimeType);
     }
 
-    public void storeElement(String id, String element) {
-        SharedPreferences.Editor edit = ((MainActivity) mContext).getSharedPreferences("com.shoppingmall.smms",Activity.MODE_PRIVATE).edit();
+    private void storeElement(String id, String element) {
+        SharedPreferences.Editor edit = ((MainActivity) mContext).getSharedPreferences(MainActivity.packageId, Activity.MODE_PRIVATE).edit();
         edit.putString(id, element);
         edit.commit();
+    }
 
+    private void clearStoredUserData() {
+        SharedPreferences.Editor edit = ((MainActivity) mContext).getSharedPreferences(MainActivity.packageId,Activity.MODE_PRIVATE).edit();
+        edit.clear();
+        edit.commit();
     }
 }

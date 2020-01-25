@@ -1,6 +1,7 @@
 package com.shoppingmall.smms;
 
 import com.shoppingmall.smms.Models.FCMToken;
+import com.shoppingmall.smms.Models.InviteResponse;
 import com.shoppingmall.smms.Models.ResponseMessage;
 import com.shoppingmall.smms.Models.StaffCard;
 import com.shoppingmall.smms.Models.User;
@@ -8,12 +9,15 @@ import com.shoppingmall.smms.Models.UserLogin;
 import com.shoppingmall.smms.Models.UserLoginResult;
 import com.shoppingmall.smms.Models.UserMacAddress;
 
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
+import retrofit2.http.Streaming;
+import retrofit2.http.Url;
 
 public interface VisionfService {
     @POST("api/login")
@@ -34,4 +38,9 @@ public interface VisionfService {
     @GET("api/security/checkQrCode/{userID}/{qrCodeText}")
     Call<ResponseMessage<String>> checkQrCode(@Path("userID") String userID, @Path("qrCodeText") String qrCodeText);
 
+    @GET
+    Call<ResponseBody> downloadFileWithDynamicUrlSync(@Url String fileUrl);
+
+    @POST("api/inviteResponse")
+    Call<ResponseMessage<String>> sendInviteResponse(@Body InviteResponse inviteResponse);
 }

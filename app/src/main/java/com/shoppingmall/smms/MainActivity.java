@@ -20,17 +20,20 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
+import android.net.Uri;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.method.LinkMovementMethod;
 import android.util.Base64;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import android.webkit.DownloadListener;
 import android.webkit.URLUtil;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -47,44 +50,54 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.shoppingmall.smms.Helpers.AuthHelper;
 import com.shoppingmall.smms.Helpers.FileHelper;
 import com.shoppingmall.smms.Helpers.NetworkHelper;
+import com.shoppingmall.smms.Helpers.NotificationHelper;
 import com.shoppingmall.smms.Helpers.QRCodeHelper;
 import com.shoppingmall.smms.Models.ConnectionStatus;
 import com.shoppingmall.smms.Models.ResponseMessage;
 import com.shoppingmall.smms.Models.StaffCard;
 import com.shoppingmall.smms.Models.User;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class MainActivity extends AppCompatActivity {
 
     protected static WebView webViewSMMS;
     protected static String urlStr = "";
-    protected static String webSiteURL = "http://192.168.2.11:3000";
+    protected static String webSiteURL = "http://192.168.2.24:3000";
+    protected static final String packageId = "com.shoppingmall.smms";
     protected static SwipeRefreshLayout swipeRefreshLayout;
-    private ViewTreeObserver.OnScrollChangedListener myOnScrollChangedListener;
     private static Context _mainContext;
 
     private static ConnectionStatus connectionStatus;
     // The BroadcastReceiver that tracks network connectivity changes.
     private NetworkReceiver receiver = new NetworkReceiver();
-    private Boolean isSendMacAddressSuccess = false;
 
     protected static final String ELEMENTID_USERID = "userid";
     protected static final String ELEMENTID_EMAIL = "email";
     protected static final String ELEMENTID_PASSWORD = "password";
 
+    // File Chooser
+    private String mCM;
+    private ValueCallback<Uri> mUM;
+    private ValueCallback<Uri[]> mUMA;
+    private final static int FCR = 1;
+    private final static int FILECHOOSER_RESULTCODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         _mainContext = this;
-
-        // TODO: Başka bir yolu var mı?
+        FileHelper.setMainContext(_mainContext);
         NetworkHelper.setContext(getApplicationContext());
 
         checkPermission();
 
         // Fill User Credentials From Shared Preferences
-        SharedPreferences prefs = getSharedPreferences("com.shoppingmall.smms", Activity.MODE_PRIVATE);
+        SharedPreferences prefs = getSharedPreferences(MainActivity.packageId, Activity.MODE_PRIVATE);
         String _userID = prefs.getString(ELEMENTID_USERID, "");
         String _email = prefs.getString(ELEMENTID_EMAIL, "");
         String _password = prefs.getString(ELEMENTID_PASSWORD, "");
@@ -99,19 +112,17 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        checkUsageAgreement();
-
         FirebaseInstanceId.getInstance().getInstanceId()
-                .addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<InstanceIdResult> task) {
-                        if (!task.isSuccessful()) return;
+            .addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
+                @Override
+                public void onComplete(@NonNull Task<InstanceIdResult> task) {
+                    if (!task.isSuccessful()) return;
 
-                        String fcmToken = task.getResult().getToken();
-                        AuthHelper.setFcmToken(fcmToken);
-                        AuthHelper.sendFCMTokenToServer();
-                    }
-                });
+                    String fcmToken = task.getResult().getToken();
+                    AuthHelper.setFcmToken(fcmToken);
+                    AuthHelper.sendFCMTokenToServer();
+                }
+            });
 
         initialSecurtyPersonelProcess();
         processIntent(getIntent());
@@ -146,9 +157,62 @@ public class MainActivity extends AppCompatActivity {
         webViewSMMS.restoreState(savedInstanceState);
     }
 
-    private void processIntent(Intent intent) {
+    private void processIntent(final Intent intent) {
         String urlValue = intent.getStringExtra("url");
         String messageTypes = intent.getStringExtra("type");
+        String actionCode = intent.getStringExtra("actionCode");
+        final int notificationId = intent.getIntExtra("notificationId", -1);
+
+        if (actionCode != null) {
+            switch (actionCode) {
+                case "loginRequired":
+                    showAlertDialog("Oturum Açma Zorunlu", "Uygulamaya kullanıcı bilgileriniz ile giriş yapmalısınız.", "Tamam", "Uygulamayı Kapat", new RunnableArg<Boolean>() {
+                        @Override
+                        public void run() {
+                            if (this.getArg() == false) {
+                                ((Activity)MainActivity._mainContext).finish();
+                            }
+                        }
+                    });
+                break;
+                case "loginError":
+                    ConnectionStatus connectionStatus = NetworkHelper.getCurrentlyConnectionStatus(this);
+                    if (connectionStatus.mobileConnected || connectionStatus.wifiConnected) {
+                        SharedPreferences.Editor edit = (this).getSharedPreferences(MainActivity.packageId,Activity.MODE_PRIVATE).edit();
+                        edit.clear();
+                        edit.commit();
+                    }
+                    showAlertDialog("Oturum açılamadı", "Kullanıcı bilgilerinizi kontrol ediniz, eğer kullanıcı bilgilerinin doğru olduğunu düşünüyorsanız internet bğlantınızı kontrol edin.",
+                            "Yeniden Dene", "Uygulamayı Kapat", new RunnableArg<Boolean>() {
+                                @Override
+                                public void run() {
+                                    if (this.getArg() == false) {
+                                        ((Activity)MainActivity._mainContext).finish();
+                                    }
+                                }
+                            });
+                break;
+                case "manualReply":
+                    NotificationHelper.cancelNotification(this, notificationId);
+                    showAlertDialog("Toplantı Katılım Teyidi", "Lütfen yeni açılacak olan pencedeki \"Toplantı Katılım Teyidi\" bölümüde bulunan \"Katılmayacağım\" butonuna tıkladıktan sonra açılan yazı alanına katılmama sebebinizi yazınız.",
+                            "Tamam", null, null);
+                break;
+                case "sendingError":
+                    showAlertDialog("Bir Sorun Oluştu", "Toplantı katılım teyidine vermiş olduğunuz cevap sisteme iletilemedi.",
+                            "Daha sonra tekrar dene", "Yeniden Dene", new RunnableArg<Boolean>() {
+                                @Override
+                                public void run() {
+                                    if (!this.getArg()) {
+                                        NotificationHelper.cancelNotification(_mainContext, notificationId);
+                                        NotificationHelper.showInviteNotification(_mainContext, NotificationHelper.bundleToMap(intent.getExtras()));
+                                    }else {
+
+                                    }
+                                }
+                            });
+                break;
+            }
+        }
 
         if (messageTypes != null && messageTypes.equals("chat")) {
             // New Chat Message
@@ -162,7 +226,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public static void gotoURL(String url) {
-        MainActivity.evaluateJavascriptStr("document.location = \"" + url + "\";");
+        if (url != null && !url.isEmpty()) {
+            MainActivity.evaluateJavascriptStr("document.location = \"" + url + "\";");
+        }
     }
 
     // TODO: Ne kadar gerekli ?
@@ -206,17 +272,18 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 swipeRefreshLayout.setRefreshing(false);
 
-                SharedPreferences prefs = getSharedPreferences("com.shoppingmall.smms", Activity.MODE_PRIVATE);
+                SharedPreferences prefs = getSharedPreferences(MainActivity.packageId, Activity.MODE_PRIVATE);
                 String email = prefs.getString(ELEMENTID_EMAIL, "");
                 String password = prefs.getString(ELEMENTID_PASSWORD, "");
-                String signinURL = webSiteURL + "/#/login/signin";
+                String signinURL = webSiteURL + "/#!/login/signin";
+                String profilePageURL = webSiteURL + "/#!/app/pages/user";
+                String signoutURL = webSiteURL + "/#!/login/signout";
 
                 if (email.length() > 0 && password.length() > 0 && url.equals(signinURL)) {
                     view.evaluateJavascript("javascript:window.actions.initLoginForAndroid('" + email+ "' , '"+ password +"') ; ", null);
-                }
-
-                String profilePageURL = webSiteURL + "/#/app/pages/user";
-                if (url.equals(profilePageURL)) {
+                } else if (url.equals(signoutURL)) {
+                    clearStoredUserData();
+                } else if (url.equals(profilePageURL)) {
                     User userInfo = AuthHelper.getUserInfo();
                     if (userInfo.role.equals("SECURITY")) {
                         if (connectionStatus.mobileConnected) {
@@ -273,13 +340,58 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
+                if (url.indexOf("#!/app/pages/inbox") != -1) {
+                    swipeRefreshLayout.setEnabled(false);
+                } else {
+                    swipeRefreshLayout.setEnabled(true);
+                }
             }
         });
 
         webViewSMMS.setWebChromeClient(new WebChromeClient() {
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, WebChromeClient.FileChooserParams fileChooserParams) {
+                if (mUMA != null) {
+                    mUMA.onReceiveValue(null);
+                }
+                mUMA = filePathCallback;
+                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                if (takePictureIntent.resolveActivity(MainActivity.this.getPackageManager()) != null) {
+                    File photoFile = null;
+                    try {
+                        photoFile = createImageFile();
+                        takePictureIntent.putExtra("PhotoPath", mCM);
+                    } catch (IOException ex) {
+                        Log.e("Webview", "Image file creation failed", ex);
+                    }
+                    if (photoFile != null) {
+                        mCM = "file:" + photoFile.getAbsolutePath();
+                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(photoFile));
+                    } else {
+                        takePictureIntent = null;
+                    }
+                }
+
+                Intent contentSelectionIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE);
+                contentSelectionIntent.setType("*/*");
+                Intent[] intentArray;
+                if (takePictureIntent != null) {
+                    intentArray = new Intent[]{takePictureIntent};
+                } else {
+                    intentArray = new Intent[0];
+                }
+
+                Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
+                chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent);
+                chooserIntent.putExtra(Intent.EXTRA_TITLE, "Image Chooser");
+                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray);
+                startActivityForResult(chooserIntent, FCR);
+                return true;
+            }
         });
+
         // TODO: remove setWebContentsDebuggingEnabled
-        WebView.setWebContentsDebuggingEnabled(true);
+        // WebView.setWebContentsDebuggingEnabled(true);
 
         webViewSMMS.getSettings().setAppCachePath(this.getApplicationContext().getCacheDir().getAbsolutePath() + "/cache");
         webViewSMMS.getSettings().setDatabaseEnabled(true);
@@ -290,7 +402,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
                 String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
-                webViewSMMS.loadUrl(FileHelper.getBase64StringFromBlobUrl(url, fileName, mimeType));
+                if(url.startsWith("blob")) {
+                    webViewSMMS.loadUrl(FileHelper.getBase64StringFromBlobUrl(url, fileName, mimeType));
+                } else {
+
+                }
             }
         });
 
@@ -298,6 +414,7 @@ public class MainActivity extends AppCompatActivity {
         webViewSMMS.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
         webViewSMMS.addJavascriptInterface(new WebAppInterface(this), "Android");
         webViewSMMS.getSettings().setAllowFileAccess(true);
+        webViewSMMS.getSettings().setAllowContentAccess(true);
         webViewSMMS.getSettings().setAllowFileAccessFromFileURLs(true);
         webViewSMMS.loadUrl(MainActivity.webSiteURL);
     }
@@ -381,46 +498,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void checkUsageAgreement() {
-        final SharedPreferences userDetails = this.getSharedPreferences("userdetails", MODE_PRIVATE);
-        boolean usageAgreement = userDetails.getBoolean("usageagreement", false);
-
-        if (usageAgreement)
-            return;
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LayoutInflater inflater = getLayoutInflater();
-        View dialogLayout = inflater.inflate(R.layout.alert_dialog_usage_agreement, null);
-        builder.setPositiveButton(R.string.allow, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                SharedPreferences.Editor edit = userDetails.edit();
-                edit.putBoolean("usageagreement", true);
-                edit.apply();
-            }
-        });
-        builder.setNegativeButton(R.string.denny, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                MainActivity.this.finish();
-                System.exit(0);
-            }
-        });
-        builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
-            @Override
-            public void onCancel(DialogInterface dialog) {
-                MainActivity.this.finish();
-                System.exit(0);
-            }
-        });
-
-        TextView textView = (TextView) dialogLayout.findViewById(R.id.usageAgreementLink);
-        textView.setMovementMethod(LinkMovementMethod.getInstance());
-
-        builder.setView(dialogLayout);
-        builder.show();
-    }
-
     private void initialSecurtyPersonelProcess() {
         // Registers BroadcastReceiver to track network connection changes.
         IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
@@ -433,15 +510,15 @@ public class MainActivity extends AppCompatActivity {
                 if (this.getArg() != null) {
                     MainActivity.connectionStatus = this.getArg();
                     if (connectionStatus.wifiConnected) {
-                        Toast.makeText(getApplicationContext(), String.format("Wifi -> %s", MainActivity.connectionStatus.SSID), Toast.LENGTH_SHORT).show();
+                        // Toast.makeText(getApplicationContext(), String.format("Wifi -> %s", MainActivity.connectionStatus.SSID), Toast.LENGTH_SHORT).show();
                     }
-                    Toast.makeText(getApplicationContext(), String.format("Wifi -> %b, BroadBand -> %b", MainActivity.connectionStatus.wifiConnected, MainActivity.connectionStatus.mobileConnected), Toast.LENGTH_SHORT).show();
+                    // Toast.makeText(getApplicationContext(), String.format("Wifi -> %b, BroadBand -> %b", MainActivity.connectionStatus.wifiConnected, MainActivity.connectionStatus.mobileConnected), Toast.LENGTH_SHORT).show();
                 }
             }
         });
 
         String macAddress = NetworkHelper.getMacAddr(this);
-        Toast.makeText(getApplicationContext(), macAddress, Toast.LENGTH_LONG).show();
+        // Toast.makeText(getApplicationContext(), macAddress, Toast.LENGTH_LONG).show();
     }
 
     private void showStaffCard(final StaffCard staffCard) {
@@ -503,5 +580,108 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
             }
         });
+    }
+
+
+
+
+    // For File Chooser
+    public void openFileChooser(ValueCallback<Uri> uploadMsg) {
+        this.openFileChooser(uploadMsg, "*/*");
+    }
+
+    public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
+        this.openFileChooser(uploadMsg, acceptType, null);
+    }
+
+    public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType, String capture) {
+        Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("*/*");
+        MainActivity.this.startActivityForResult(Intent.createChooser(i, "File Browser"), FILECHOOSER_RESULTCODE);
+    }
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
+        if (Build.VERSION.SDK_INT >= 21) {
+            Uri[] results = null;
+            //Check if response is positive
+            if (resultCode == Activity.RESULT_OK) {
+                if (requestCode == FCR) {
+                    if (null == mUMA) {
+                        return;
+                    }
+                    if (intent == null) {
+                        //Capture Photo if no image available
+                        if (mCM != null) {
+                            results = new Uri[]{Uri.parse(mCM)};
+                        }
+                    } else {
+                        String dataString = intent.getDataString();
+                        if (dataString != null) {
+                            results = new Uri[]{Uri.parse(dataString)};
+                        }
+                    }
+                }
+            }
+            mUMA.onReceiveValue(results);
+            mUMA = null;
+        } else {
+            if (requestCode == FCR) {
+                if (null == mUM) return;
+                Uri result = intent == null || resultCode != RESULT_OK ? null : intent.getData();
+                mUM.onReceiveValue(result);
+                mUM = null;
+            }
+        }
+    }
+
+    // Create an image file
+    private File createImageFile() throws IOException {
+        @SuppressLint("SimpleDateFormat") String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "img_" + timeStamp + "_";
+        File storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        return File.createTempFile(imageFileName, ".jpg", storageDir);
+    }
+
+    private void clearStoredUserData() {
+        SharedPreferences.Editor edit = getApplicationContext().getSharedPreferences(MainActivity.packageId,Activity.MODE_PRIVATE).edit();
+        edit.clear();
+        edit.apply();
+    }
+
+    private void showAlertDialog (String title, String message, String okButtonText, String cancelButtonText, final RunnableArg<Boolean> runnableArg) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(title);
+        builder.setMessage(message);
+
+        if (okButtonText != null) {
+            builder.setPositiveButton(okButtonText, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    if (runnableArg != null) {
+                        runnableArg.run(true);
+                    }
+                }
+            });
+        }
+
+        if (cancelButtonText != null) {
+            builder.setNeutralButton(cancelButtonText, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    if (runnableArg != null) {
+                        runnableArg.run(false);
+                    }
+                }
+            });
+        }
+
+        if (okButtonText != null || cancelButtonText != null) {
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
     }
 }

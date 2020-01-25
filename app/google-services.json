@@ -8,6 +8,42 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1041210087509:android:5b8d3ed13ed37359685cdc",
+        "android_client_info": {
+          "package_name": "com.kentpark.smms"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1041210087509-7mg6k8tffgi4348k84hhb22fh5a373oj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-VKHjibcTgmfC2XzrRpaXdk26IEQIpTg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1041210087509-7mg6k8tffgi4348k84hhb22fh5a373oj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1041210087509-6l30u2uu4se4n3s6nusfe4pi92nkmmpn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.vizyonf.viaasiasmms"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1041210087509:android:2da8146876459407685cdc",
         "android_client_info": {
           "package_name": "com.shoppingmall.smms"
@@ -30,6 +66,85 @@
             {
               "client_id": "1041210087509-7mg6k8tffgi4348k84hhb22fh5a373oj.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "1041210087509-6l30u2uu4se4n3s6nusfe4pi92nkmmpn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.vizyonf.viaasiasmms"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1041210087509:android:5af164515723f4d3685cdc",
+        "android_client_info": {
+          "package_name": "com.viaasia.smms"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1041210087509-7mg6k8tffgi4348k84hhb22fh5a373oj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-VKHjibcTgmfC2XzrRpaXdk26IEQIpTg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1041210087509-7mg6k8tffgi4348k84hhb22fh5a373oj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1041210087509-6l30u2uu4se4n3s6nusfe4pi92nkmmpn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.vizyonf.viaasiasmms"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1041210087509:android:f6c9d1b0016a4199685cdc",
+        "android_client_info": {
+          "package_name": "com.viamarina.smms"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1041210087509-7mg6k8tffgi4348k84hhb22fh5a373oj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-VKHjibcTgmfC2XzrRpaXdk26IEQIpTg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1041210087509-7mg6k8tffgi4348k84hhb22fh5a373oj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1041210087509-6l30u2uu4se4n3s6nusfe4pi92nkmmpn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.vizyonf.viaasiasmms"
+              }
             }
           ]
         }

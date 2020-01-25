@@ -3,6 +3,8 @@ package com.shoppingmall.smms.Helpers;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -97,5 +99,25 @@ public class NetworkHelper {
         }
     }
 
+    public static ConnectionStatus getCurrentlyConnectionStatus (Context c) {
+        ConnectivityManager connMgr = (ConnectivityManager)
+                c.getSystemService(Context.CONNECTIVITY_SERVICE);
 
+        NetworkInfo activeInfo = connMgr.getActiveNetworkInfo();
+
+        ConnectionStatus connectionStatus = new ConnectionStatus();
+
+        if (activeInfo != null && activeInfo.isConnected()) {
+            connectionStatus.wifiConnected = activeInfo.getType() == ConnectivityManager.TYPE_WIFI;
+            if (connectionStatus.wifiConnected) {
+                NetworkHelper.setWifiInfo(c, connectionStatus);
+            }
+            connectionStatus.mobileConnected = activeInfo.getType() == ConnectivityManager.TYPE_MOBILE;
+        } else {
+            connectionStatus.wifiConnected = false;
+            connectionStatus.mobileConnected = false;
+        }
+
+        return connectionStatus;
+    }
 }

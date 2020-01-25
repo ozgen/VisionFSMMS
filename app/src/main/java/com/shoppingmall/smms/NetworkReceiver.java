@@ -8,6 +8,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
 import com.shoppingmall.smms.Helpers.NetworkHelper;
+import com.shoppingmall.smms.Helpers.NotificationHelper;
 import com.shoppingmall.smms.Models.ConnectionStatus;
 
 import java.util.ArrayList;
@@ -25,24 +26,7 @@ class NetworkReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        ConnectivityManager connMgr = (ConnectivityManager)
-                _activity.getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        NetworkInfo activeInfo = connMgr.getActiveNetworkInfo();
-
-        ConnectionStatus connectionStatus = new ConnectionStatus();
-
-        if (activeInfo != null && activeInfo.isConnected()) {
-            connectionStatus.wifiConnected = activeInfo.getType() == ConnectivityManager.TYPE_WIFI;
-            if (connectionStatus.wifiConnected) {
-                NetworkHelper.setWifiInfo(context, connectionStatus);
-            }
-            connectionStatus.mobileConnected = activeInfo.getType() == ConnectivityManager.TYPE_MOBILE;
-        } else {
-            connectionStatus.wifiConnected = false;
-            connectionStatus.mobileConnected = false;
-        }
-
+        ConnectionStatus connectionStatus = NetworkHelper.getCurrentlyConnectionStatus(_activity.getApplicationContext());
         this.emitAllSubscribers(connectionStatus);
     }
 
