@@ -1,36 +1,43 @@
 package com.shoppingmall.smms;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+import android.app.Activity;
+import android.app.AlertDialog;
 
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
 
+import com.shoppingmall.smms.Helpers.AuthHelper;
+import com.shoppingmall.smms.Helpers.NotificationHelper;
+import com.shoppingmall.smms.Models.InviteResponse;
 import com.shoppingmall.smms.Models.ResponseMessage;
 
-public class InputTextAlertActivity extends AppCompatActivity {
+public class InputTextAlertActivity extends Activity {
 
     Context context;
+    Activity activity;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_alert);
 
-        context = InputTextAlertActivity.this.getApplicationContext();
+        activity = this;
+        context = this.getApplicationContext();
+
         processIntent(getIntent());
     }
 
     private void processIntent(final Intent intent) {
-        String urlValue = intent.getStringExtra("url");
-        String messageTypes = intent.getStringExtra("type");
         String actionCode = intent.getStringExtra("actionCode");
         final int notificationId = intent.getIntExtra("notificationId", -1);
+        final String meetingId = intent.getStringExtra("meetingId");
+        final String userId = intent.getStringExtra("userId");
 
         if (actionCode != null) {
             switch (actionCode) {
@@ -39,12 +46,32 @@ public class InputTextAlertActivity extends AppCompatActivity {
                             "Gönder", "Kapat", new RunnableArg<ResponseMessage<String>>() {
                                 @Override
                                 public void run() {
-                                    ResponseMessage<String> alertDialogResponseMessage = this.getArg();
+                                    final ResponseMessage<String> alertDialogResponseMessage = this.getArg();
 
                                     if (alertDialogResponseMessage.success) {
+                                        if (!alertDialogResponseMessage.message.isEmpty()) {
 
-                                    } else {
+                                            final InviteResponse inviteReqObj = new InviteResponse();
+                                            inviteReqObj.accept = false;
+                                            inviteReqObj.MeetingId = meetingId;
+                                            inviteReqObj.UserId = userId;
+                                            inviteReqObj.responseInvitation = alertDialogResponseMessage.message;
 
+                                            AuthHelper.sendInviteResponse(context, notificationId, inviteReqObj, new RunnableArg<ResponseMessage<String>>() {
+                                                @Override
+                                                public void run() {
+                                                    ResponseMessage<String> responseMessage = this.getArg();
+
+                                                    if (responseMessage.success) {
+                                                        NotificationHelper.cancelNotification(context, notificationId);
+                                                        activity.finish();
+                                                    } else {
+                                                        openIntentWithUrlExtra(context, MainActivity.class, intent.getExtras(), "sendingError");
+                                                        activity.finish();
+                                                    }
+                                                }
+                                            });
+                                        }
                                     }
                                 }
                             });
@@ -61,11 +88,11 @@ public class InputTextAlertActivity extends AppCompatActivity {
 
     private void showAlertDialogWithInputText (final String title, final String message, final String okButtonText, final String cancelButtonText, final RunnableArg<ResponseMessage<String>> runnableArg) {
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        AlertDialog.Builder builder  = new AlertDialog.Builder(this);
         builder.setTitle(title);
         builder.setMessage(message);
 
-        LayoutInflater inflater = LayoutInflater.from(context);
+        LayoutInflater inflater = LayoutInflater.from(this);
         final View dialogView = inflater.inflate(R.layout.alert_dialog_with_inputtext, null);
         builder.setView(dialogView);
 
@@ -102,5 +129,14 @@ public class InputTextAlertActivity extends AppCompatActivity {
             AlertDialog dialog = builder.create();
             dialog.show();
         }
+    }
+
+    private void openIntentWithUrlExtra (Context c, Class cls, Bundle bundle, String actionCode) {
+        if (actionCode == null) actionCode = "loginRequired";
+        Intent intent = new Intent(c, cls);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.putExtras(bundle);
+        intent.putExtra("actionCode", actionCode);
+        c.startActivity(intent);
     }
 }

@@ -5,6 +5,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -62,6 +63,7 @@ public class NotificationHelper {
                     .setSmallIcon(R.mipmap.ic_launcher)
                     .setContentTitle(title)
                     .setContentText(notificationContent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
                     .setStyle(bigTextStyle);
 
             Intent acceptIntent = new Intent(c, NotificationReceiver.class);
@@ -127,6 +129,7 @@ public class NotificationHelper {
                     .setContentTitle(title)
                     .setContentText(notificationContent)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
                     .setContentIntent(acceptPendingIntent)
                     .addAction(R.drawable.ic_done_black_24dp, c.getString(R.string.acceptinvite), acceptPendingIntent)
                     .addAction(R.drawable.ic_close_black_24dp, c.getString(R.string.notacceptinvite), notAcceptPendingIntent);
@@ -139,9 +142,12 @@ public class NotificationHelper {
     }
 
     public static void cancelNotification(Context ctx, int notifyId) {
-        String ns = Context.NOTIFICATION_SERVICE;
-        NotificationManager nMgr = (NotificationManager) ctx.getSystemService(ns);
-        nMgr.cancel(notifyId);
+//        String ns = Context.NOTIFICATION_SERVICE;
+//        NotificationManager nMgr = (NotificationManager) ctx.getSystemService(ns);
+//        nMgr.cancel(notifyId);
+
+        NotificationManagerCompat mNotificationManager = NotificationManagerCompat.from(ctx.getApplicationContext());
+        mNotificationManager.cancel(notifyId);
     }
 
     public static Map<String, String> bundleToMap(Bundle extras) {

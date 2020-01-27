@@ -19,8 +19,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.NoActionBar"
         android:usesCleartextTraffic="true">
-        <activity android:name=".InputTextAlertActivity"
-            android:theme="@style/Theme.AppCompat.Dialog"></activity>
+        <activity
+            android:name=".InputTextAlertActivity"
+            android:theme="@style/AlertDialogActivityTransparent"></activity>
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize"

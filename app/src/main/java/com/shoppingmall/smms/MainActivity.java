@@ -29,7 +29,6 @@ import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.webkit.DownloadListener;
 import android.webkit.URLUtil;
@@ -66,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
     protected static WebView webViewSMMS;
     protected static String urlStr = "";
-    protected static String webSiteURL = "http://192.168.2.24:3000";
+    protected static String webSiteURL = "https://dev.vizyonf.com";
     protected static final String packageId = "com.shoppingmall.smms";
     protected static SwipeRefreshLayout swipeRefreshLayout;
     private static Context _mainContext;
@@ -165,33 +164,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (actionCode != null) {
             switch (actionCode) {
-                case "loginRequired":
-                    showAlertDialog("Oturum Açma Zorunlu", "Uygulamaya kullanıcı bilgileriniz ile giriş yapmalısınız.", "Tamam", "Uygulamayı Kapat", new RunnableArg<Boolean>() {
-                        @Override
-                        public void run() {
-                            if (this.getArg() == false) {
-                                ((Activity)MainActivity._mainContext).finish();
-                            }
-                        }
-                    });
-                break;
-                case "loginError":
-                    ConnectionStatus connectionStatus = NetworkHelper.getCurrentlyConnectionStatus(this);
-                    if (connectionStatus.mobileConnected || connectionStatus.wifiConnected) {
-                        SharedPreferences.Editor edit = (this).getSharedPreferences(MainActivity.packageId,Activity.MODE_PRIVATE).edit();
-                        edit.clear();
-                        edit.commit();
-                    }
-                    showAlertDialog("Oturum açılamadı", "Kullanıcı bilgilerinizi kontrol ediniz, eğer kullanıcı bilgilerinin doğru olduğunu düşünüyorsanız internet bğlantınızı kontrol edin.",
-                            "Yeniden Dene", "Uygulamayı Kapat", new RunnableArg<Boolean>() {
-                                @Override
-                                public void run() {
-                                    if (this.getArg() == false) {
-                                        ((Activity)MainActivity._mainContext).finish();
-                                    }
-                                }
-                            });
-                break;
                 case "manualReply":
                     NotificationHelper.cancelNotification(this, notificationId);
                     showAlertDialog("Toplantı Katılım Teyidi", "Lütfen yeni açılacak olan pencedeki \"Toplantı Katılım Teyidi\" bölümüde bulunan \"Katılmayacağım\" butonuna tıkladıktan sonra açılan yazı alanına katılmama sebebinizi yazınız.",
