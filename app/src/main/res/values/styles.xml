@@ -17,4 +17,10 @@
         <item name="android:backgroundDimEnabled">false</item>
     </style>
 
+    <style name="AppTheme.Dark.Dialog" parent="Theme.AppCompat.Dialog">
+        <item name="colorAccent">@color/colorWhite</item>
+        <item name="android:textColorPrimary">@color/iron</item>
+        <item name="android:background">@color/colorAccent</item>
+    </style>
+
 </resources>

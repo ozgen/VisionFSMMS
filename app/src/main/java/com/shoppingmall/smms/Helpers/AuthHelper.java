@@ -70,31 +70,51 @@ public class AuthHelper {
         AuthHelper.sessionInjectScript = sessionInjectScript;
     }
 
-    public static boolean login() {
+    public static void login(final RunnableArg<ResponseMessage<UserLoginResult>> runnableArg) {
         VisionfService visionfService = ApiClient.getClient();
+        Call<UserLoginResult> call = visionfService.login(new UserLogin(userEmail, password));;
 
-        if (userEmail != null && password != null) {
-            Call<UserLoginResult> callSync = visionfService.login(new UserLogin(userEmail, password));
-
-            try {
-                Response<UserLoginResult> response = callSync.execute();
-                UserLoginResult apiResponse = response.body();
-
-                if (response.code() == 200 && apiResponse != null) {
-                    _isLoggedIn = true;
-                    AuthHelper.apiToken = apiResponse.token;
-                    ApiClient.setAccessToken(AuthHelper.apiToken);
-                    AuthHelper.sendFCMTokenToServer();
-                    AuthHelper.getUserDataFromServer();
-                    return true;
+        call.enqueue(new Callback<UserLoginResult>() {
+            @Override
+            public void onResponse(Call<UserLoginResult> call, retrofit2.Response<UserLoginResult> response) {
+                int responseCode = response.code();
+                if (responseCode == 200) {
+                    UserLoginResult apiResponse = response.body();
+                    ResponseMessage<UserLoginResult> runnableRes = new ResponseMessage<>();
+                    runnableRes.success = false;
+                    if (apiResponse != null && apiResponse.success) {
+                        _isLoggedIn = true;
+                        AuthHelper.apiToken = apiResponse.token;
+                        ApiClient.setAccessToken(AuthHelper.apiToken);
+                        AuthHelper.sendFCMTokenToServer();
+                        AuthHelper.getUserDataFromServer();
+                        runnableRes.success = true;
+                        runnableRes.message = apiResponse;
+                        runnableArg.run(runnableRes);
+                        return;
+                    }
                 }
-            } catch (Exception ex) {
-                Log.e("AuthHelper", ex.getMessage() != null ? ex.getMessage() : "Null");
-            }
-        }
 
-        _isLoggedIn = false;
-        return false;
+                _isLoggedIn = false;
+            }
+
+            @Override
+            public void onFailure(Call<UserLoginResult> call, Throwable t) {
+                ResponseMessage<UserLoginResult> runnableRes = new ResponseMessage<>();
+                runnableRes.success = false;
+                runnableArg.run(runnableRes);
+            }
+        });
+    }
+
+    public static void logOut() {
+        userID = null;
+        userEmail = null;
+        password = null;
+        apiToken = null;
+        fcmToken = null;
+        userInfo = null;
+        sessionInjectScript = null;
     }
 
     public static boolean sendFCMTokenToServer() {

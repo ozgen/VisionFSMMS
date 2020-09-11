@@ -1,21 +1,17 @@
 package com.shoppingmall.smms;
 
 import android.app.Activity;
-import android.app.NotificationManager;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Environment;
-import android.util.Base64;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 
-import androidx.core.app.NotificationCompat;
-
 import com.shoppingmall.smms.Helpers.AuthHelper;
 import com.shoppingmall.smms.Helpers.FileHelper;
+import com.shoppingmall.smms.Models.ResponseMessage;
+import com.shoppingmall.smms.Models.UserLoginResult;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 public class WebAppInterface {
@@ -35,24 +31,32 @@ public class WebAppInterface {
             storeElement(MainActivity.ELEMENTID_EMAIL, email);
             storeElement(MainActivity.ELEMENTID_PASSWORD, password);
 
-            AuthHelper.login(); // TODO: Login başarısız olursa Splash Screen Eklenmeli
-            AuthHelper.sendFCMTokenToServer();
+            if (!AuthHelper.isLoggedIn()) {
+                final ProgressDialog progressDialog = new ProgressDialog(mContext,
+                        R.style.AppTheme_Dark_Dialog);
+                progressDialog.setIndeterminate(true);
+                progressDialog.setMessage(mContext.getResources().getString(R.string.loginRedirect));
+                progressDialog.show();
 
-            new android.os.Handler().postDelayed(
-                    new Runnable() {
-                        public void run() {
-                            MainActivity.gotoURL(MainActivity.urlStr);
+                AuthHelper.login(new RunnableArg<ResponseMessage<UserLoginResult>>() {
+                    @Override
+                    public void run() {
+                        ResponseMessage<UserLoginResult> responseMessage = this.getArg();
+                        if (responseMessage.success) {
+                            AuthHelper.sendFCMTokenToServer();
                         }
-                    },
-                    500);
-        } else {
-            // TODO: Hatalı süreç, Yönetilmesi Gerekiyor
+                        MainActivity.gotoURL(MainActivity.urlStr);
+                        progressDialog.dismiss();
+                    }
+                });
+            }
         }
     }
 
     @JavascriptInterface
     public void userLogoutMessageHandler() {
         clearStoredUserData();
+        AuthHelper.logOut();
     }
 
     @JavascriptInterface

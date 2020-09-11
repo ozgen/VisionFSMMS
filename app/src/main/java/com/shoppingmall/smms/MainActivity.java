@@ -11,6 +11,8 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.ProgressDialog;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -34,6 +36,8 @@ import android.webkit.DownloadListener;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -55,6 +59,7 @@ import com.shoppingmall.smms.Models.ConnectionStatus;
 import com.shoppingmall.smms.Models.ResponseMessage;
 import com.shoppingmall.smms.Models.StaffCard;
 import com.shoppingmall.smms.Models.User;
+import com.shoppingmall.smms.Models.UserLoginResult;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
 
     protected static WebView webViewSMMS;
     protected static String urlStr = "";
-    protected static String webSiteURL = "https://dev.vizyonf.com";
+    protected static String webSiteURL = "http://192.168.2.16:3000";
     protected static final String packageId = "com.shoppingmall.smms";
     protected static SwipeRefreshLayout swipeRefreshLayout;
     private static Context _mainContext;
@@ -80,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
 
     // File Chooser
     private String mCM;
+    private Uri mCUri;
     private ValueCallback<Uri> mUM;
     private ValueCallback<Uri[]> mUMA;
     private final static int FCR = 1;
@@ -107,8 +113,26 @@ public class MainActivity extends AppCompatActivity {
             AuthHelper.setPassword(_password);
 
             if (!AuthHelper.isLoggedIn()) {
-               AuthHelper.login();
+                final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this,
+                        R.style.AppTheme_Dark_Dialog);
+                progressDialog.setIndeterminate(true);
+                progressDialog.setMessage(getApplication().getResources().getString(R.string.loginprocess));
+                progressDialog.show();
+
+                AuthHelper.login(new RunnableArg<ResponseMessage<UserLoginResult>>() {
+                    @Override
+                    public void run() {
+                        ResponseMessage<UserLoginResult> responseMessage = this.getArg();
+                        if (!responseMessage.success) {
+
+                        }
+                        progressDialog.dismiss();
+                        initialWebView();
+                    }
+                });
             }
+        } else {
+            initialWebView();
         }
 
         FirebaseInstanceId.getInstance().getInstanceId()
@@ -126,7 +150,6 @@ public class MainActivity extends AppCompatActivity {
         initialSecurtyPersonelProcess();
         processIntent(getIntent());
         initialSwipeRefreshLayout();
-        initialWebView();
     }
 
     @Override
@@ -177,7 +200,7 @@ public class MainActivity extends AppCompatActivity {
                                     if (!this.getArg()) {
                                         NotificationHelper.cancelNotification(_mainContext, notificationId);
                                         NotificationHelper.showInviteNotification(_mainContext, NotificationHelper.bundleToMap(intent.getExtras()));
-                                    }else {
+                                    } else {
 
                                     }
                                 }
@@ -318,6 +341,11 @@ public class MainActivity extends AppCompatActivity {
                     swipeRefreshLayout.setEnabled(true);
                 }
             }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
+            }
         });
 
         webViewSMMS.setWebChromeClient(new WebChromeClient() {
@@ -329,16 +357,23 @@ public class MainActivity extends AppCompatActivity {
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                 if (takePictureIntent.resolveActivity(MainActivity.this.getPackageManager()) != null) {
                     File photoFile = null;
+                    Uri photoUri = null;
                     try {
-                        photoFile = createImageFile();
-                        takePictureIntent.putExtra("PhotoPath", mCM);
+                        if (Build.VERSION.SDK_INT >= 29) {
+                            photoUri = createImageUri();
+                            mCUri = photoUri;
+                            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+                        } else {
+                            photoFile = createImageFile();
+                            takePictureIntent.putExtra("PhotoPath", mCM);
+                        }
                     } catch (IOException ex) {
                         Log.e("Webview", "Image file creation failed", ex);
                     }
                     if (photoFile != null) {
                         mCM = "file:" + photoFile.getAbsolutePath();
                         takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(photoFile));
-                    } else {
+                    } else if (photoUri == null) {
                         takePictureIntent = null;
                     }
                 }
@@ -388,7 +423,12 @@ public class MainActivity extends AppCompatActivity {
         webViewSMMS.getSettings().setAllowFileAccess(true);
         webViewSMMS.getSettings().setAllowContentAccess(true);
         webViewSMMS.getSettings().setAllowFileAccessFromFileURLs(true);
-        webViewSMMS.loadUrl(MainActivity.webSiteURL);
+        if (AuthHelper.isLoggedIn()) {
+            webViewSMMS.loadUrl(MainActivity.webSiteURL);
+        } else {
+            String landingPageURL = webSiteURL + "/#!/landing/welcome";
+            webViewSMMS.loadUrl(landingPageURL);
+        }
     }
 
     @Override
@@ -554,9 +594,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-
-
-
     // For File Chooser
     public void openFileChooser(ValueCallback<Uri> uploadMsg) {
         this.openFileChooser(uploadMsg, "*/*");
@@ -589,11 +626,15 @@ public class MainActivity extends AppCompatActivity {
                         //Capture Photo if no image available
                         if (mCM != null) {
                             results = new Uri[]{Uri.parse(mCM)};
+                        } else if (mCUri != null) {
+                            results = new Uri[]{mCUri};
                         }
                     } else {
                         String dataString = intent.getDataString();
                         if (dataString != null) {
                             results = new Uri[]{Uri.parse(dataString)};
+                        } else if (mCUri != null) {
+                            results = new Uri[]{mCUri};
                         }
                     }
                 }
@@ -616,6 +657,15 @@ public class MainActivity extends AppCompatActivity {
         String imageFileName = "img_" + timeStamp + "_";
         File storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         return File.createTempFile(imageFileName, ".jpg", storageDir);
+    }
+
+    private Uri createImageUri() {
+        String status = Environment.getExternalStorageState();
+        if (status.equals(Environment.MEDIA_MOUNTED)) {
+            return MainActivity.this.getApplicationContext().getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new ContentValues());
+        } else {
+            return MainActivity.this.getApplicationContext().getContentResolver().insert(MediaStore.Images.Media.INTERNAL_CONTENT_URI, new ContentValues());
+        }
     }
 
     private void clearStoredUserData() {

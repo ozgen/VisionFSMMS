@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/VisionF SMMS.iml" filepath="$PROJECT_DIR$/VisionF SMMS.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/VisionF_SMMS.iml" filepath="$PROJECT_DIR$/.idea/modules/VisionF_SMMS.iml" group="VisionF_SMMS" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" group="VisionF SMMS/app" />
     </modules>
   </component>
 </project>

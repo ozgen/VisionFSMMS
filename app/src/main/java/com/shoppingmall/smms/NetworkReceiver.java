@@ -4,11 +4,8 @@ import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 
 import com.shoppingmall.smms.Helpers.NetworkHelper;
-import com.shoppingmall.smms.Helpers.NotificationHelper;
 import com.shoppingmall.smms.Models.ConnectionStatus;
 
 import java.util.ArrayList;

@@ -18,6 +18,13 @@
         Dosya indirme işlemi başarısız oldu.
     </string>
 
+    <string name="test1">
+        Test 1
+    </string>
+    <string name="test2">
+        Test 2
+    </string>
+
     <string name="inviteMessages_meetingType">Toplantı Tipi: </string>
     <string name="inviteMessages_meetingSubject">Toplantı Konusu: </string>
     <string name="inviteMessages_meetingLocation">Toplantı Konumu: </string>
@@ -27,4 +34,7 @@
     <string name="inviteMessages_title">Toplantı Katılım Teyidi</string>
     <string name="acceptinvite">Katılacağım</string>
     <string name="notacceptinvite">Katılmayacağım</string>
+    <string name="loginprocess">Giriş Yapılıyor...</string>
+    <string name="loginRedirect">Yönlendiriliyorsunuz</string>
+    <string name="errorHttpLoad">Sayfa Yüklenemedi</string>
 </resources>

@@ -10,15 +10,12 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.util.Base64;
-import android.util.Log;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
 import com.shoppingmall.smms.ApiClient;
-import com.shoppingmall.smms.MainActivity;
-import com.shoppingmall.smms.MyFirebaseMessagingService;
 import com.shoppingmall.smms.R;
 import com.shoppingmall.smms.VisionfService;
 
