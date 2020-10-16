@@ -18,13 +18,6 @@
         Dosya indirme işlemi başarısız oldu.
     </string>
 
-    <string name="test1">
-        Test 1
-    </string>
-    <string name="test2">
-        Test 2
-    </string>
-
     <string name="inviteMessages_meetingType">Toplantı Tipi: </string>
     <string name="inviteMessages_meetingSubject">Toplantı Konusu: </string>
     <string name="inviteMessages_meetingLocation">Toplantı Konumu: </string>
@@ -37,4 +30,12 @@
     <string name="loginprocess">Giriş Yapılıyor...</string>
     <string name="loginRedirect">Yönlendiriliyorsunuz</string>
     <string name="errorHttpLoad">Sayfa Yüklenemedi</string>
+    <string name="errorLogin">Oturum Açma İşlemi Başarısız Oldu</string>
+    <string name="checkConnectionStatus">Cihazınız internete erişimde problem yaşıyor. Lütfen internet erişiminiz olduğundan emin olduktan sonra tekrar deneyiniz</string>
+    <string name="auth_title">Kimlik Doğrulama Gerekli!</string> <!--Authentication Required-->
+    <string name="auth_subtitle"></string>
+    <string name="auth_description">Lütfen giriş yapabilmek için kimliğinizi doğrulayın</string>
+    <string name="error_msg_biometric_not_setup">Cihazınızda tanımlı bir parmak izi bulunmuyor, lütfen ayarlar bölümünden parmak izi tanımlamanızı yapınız.</string>
+    <string name="error_msg_auth_error">Kimlik Doğrulama hatası: %1$s</string>
+    <string name="error_msg_auth_failed">Kimliğiniz Doğrulanamadı</string>
 </resources>

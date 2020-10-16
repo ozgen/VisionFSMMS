@@ -65,7 +65,7 @@ public class NotificationIntentService extends IntentService {
         }
     }
 
-    private void openIntentWithUrlExtra (Context c, Class cls, Bundle bundle, String actionCode) {
+    private void openIntentWithUrlExtra(Context c, Class cls, Bundle bundle, String actionCode) {
         if (actionCode == null) actionCode = "loginRequired";
         Intent intent = new Intent(c, cls);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

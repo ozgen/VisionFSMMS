@@ -20,7 +20,9 @@ public class NetworkHelper {
 
     private static Context _c;
 
-    public static void setContext(Context c) { _c = c; }
+    public static void setContext(Context c) {
+        _c = c;
+    }
 
     private static String getMacAddrFromNetworkInterface() {
         List<NetworkInterface> all = null;
@@ -44,7 +46,7 @@ public class NetworkHelper {
 
             StringBuilder res1 = new StringBuilder();
             for (byte b : macBytes) {
-                res1.append(String.format("%02X:",b));
+                res1.append(String.format("%02X:", b));
             }
 
             if (res1.length() > 0) {
@@ -99,7 +101,7 @@ public class NetworkHelper {
         }
     }
 
-    public static ConnectionStatus getCurrentlyConnectionStatus (Context c) {
+    public static ConnectionStatus getCurrentlyConnectionStatus(Context c) {
         ConnectivityManager connMgr = (ConnectivityManager)
                 c.getSystemService(Context.CONNECTIVITY_SERVICE);
 

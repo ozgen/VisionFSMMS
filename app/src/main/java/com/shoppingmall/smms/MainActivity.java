@@ -1,12 +1,5 @@
 package com.shoppingmall.smms;
 
-import androidx.annotation.LayoutRes;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -23,11 +16,11 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
-import android.os.Build;
-import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -45,12 +38,21 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.LayoutRes;
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.InstanceIdResult;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.shoppingmall.smms.Helpers.AuthHelper;
+import com.shoppingmall.smms.Helpers.BiometricHelperBase;
 import com.shoppingmall.smms.Helpers.FileHelper;
 import com.shoppingmall.smms.Helpers.NetworkHelper;
 import com.shoppingmall.smms.Helpers.NotificationHelper;
@@ -65,91 +67,205 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
-    protected static WebView webViewSMMS;
-    protected static String urlStr = "";
-    protected static String webSiteURL = "http://192.168.2.16:3000";
     protected static final String packageId = "com.shoppingmall.smms";
-    protected static SwipeRefreshLayout swipeRefreshLayout;
-    private static Context _mainContext;
-
-    private static ConnectionStatus connectionStatus;
-    // The BroadcastReceiver that tracks network connectivity changes.
-    private NetworkReceiver receiver = new NetworkReceiver();
-
     protected static final String ELEMENTID_USERID = "userid";
     protected static final String ELEMENTID_EMAIL = "email";
     protected static final String ELEMENTID_PASSWORD = "password";
-
+    protected static final String ELEMENTID_DONTASKBIOMETRIC = "dontaskagainbiometric";
+    protected static final String ELEMENTID_USEBIOMETRIC = "usebiometric";
+    private final static int FCR = 1;
+    private final static int FILECHOOSER_RESULTCODE = 1;
+    /// Permission Stage
+    private static final int MY_PERMISSION_REQUEST_CODE = 123;
+    protected static WebView webViewSMMS;
+    protected static String urlStr = "";
+    protected static String webSiteURL = "https://dev.visionf.com.tr";
+    protected static SwipeRefreshLayout swipeRefreshLayout;
+    private static Context _mainContext;
+    private static ConnectionStatus connectionStatus;
+    // The BroadcastReceiver that tracks network connectivity changes.
+    private NetworkReceiver receiver = new NetworkReceiver();
     // File Chooser
     private String mCM;
     private Uri mCUri;
     private ValueCallback<Uri> mUM;
     private ValueCallback<Uri[]> mUMA;
-    private final static int FCR = 1;
-    private final static int FILECHOOSER_RESULTCODE = 1;
+    private SharedPreferences sharedPreferences;
+
+    public static void gotoURL(String url) {
+        if (url != null && !url.isEmpty()) {
+            MainActivity.evaluateJavascriptStr("document.location = \"" + url + "\";");
+        }
+    }
+
+    // TODO: Ne kadar gerekli ?
+    public static void evaluateJavascriptStr(String evaluateString) {
+        if ((evaluateString != null) && !evaluateString.isEmpty() && webViewSMMS != null) {
+            final String finalEvaluateString = evaluateString;
+            webViewSMMS.post(new Runnable() {
+                @Override
+                public void run() {
+                    webViewSMMS.evaluateJavascript(finalEvaluateString, null);
+                }
+            });
+        }
+    }
+
+    protected static void showAlertDialog(String title, String message, String okButtonText, String cancelButtonText, final RunnableArg<Boolean> runnableArg, Context context) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(title);
+        builder.setMessage(message);
+
+        if (okButtonText != null) {
+            builder.setPositiveButton(okButtonText, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    if (runnableArg != null) {
+                        runnableArg.run(true);
+                    }
+                }
+            });
+        }
+
+        if (cancelButtonText != null) {
+            builder.setNeutralButton(cancelButtonText, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    if (runnableArg != null) {
+                        runnableArg.run(false);
+                    }
+                }
+            });
+        }
+
+        if (okButtonText != null || cancelButtonText != null) {
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         _mainContext = this;
+        final BiometricHelperBase biometricHelper = BiometricHelperBase.getInstance(this);
+        sharedPreferences = getSharedPreferences(MainActivity.packageId, Activity.MODE_PRIVATE);
         FileHelper.setMainContext(_mainContext);
         NetworkHelper.setContext(getApplicationContext());
+        connectionStatus = NetworkHelper.getCurrentlyConnectionStatus(_mainContext.getApplicationContext());
 
         checkPermission();
 
         // Fill User Credentials From Shared Preferences
-        SharedPreferences prefs = getSharedPreferences(MainActivity.packageId, Activity.MODE_PRIVATE);
-        String _userID = prefs.getString(ELEMENTID_USERID, "");
-        String _email = prefs.getString(ELEMENTID_EMAIL, "");
-        String _password = prefs.getString(ELEMENTID_PASSWORD, "");
+        String _userID = sharedPreferences.getString(ELEMENTID_USERID, "");
+        String _email = sharedPreferences.getString(ELEMENTID_EMAIL, "");
+        String _password = sharedPreferences.getString(ELEMENTID_PASSWORD, "");
+        Boolean _dontaskbiometric = Objects.equals(sharedPreferences.getString(ELEMENTID_DONTASKBIOMETRIC, "false"), "true");
+        Boolean _usebiometric = Objects.equals(sharedPreferences.getString(ELEMENTID_USEBIOMETRIC, "false"), "true");
 
         if (!_userID.isEmpty() && !_email.isEmpty() && !_password.isEmpty()) {
             AuthHelper.setUserID(_userID);
             AuthHelper.setUserEmail(_email);
             AuthHelper.setPassword(_password);
 
-            if (!AuthHelper.isLoggedIn()) {
-                final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this,
-                        R.style.AppTheme_Dark_Dialog);
-                progressDialog.setIndeterminate(true);
-                progressDialog.setMessage(getApplication().getResources().getString(R.string.loginprocess));
-                progressDialog.show();
+            final Boolean canAbleBiometrichw = biometricHelper.checkBiometricHardware();
 
-                AuthHelper.login(new RunnableArg<ResponseMessage<UserLoginResult>>() {
+            if (_dontaskbiometric && _usebiometric && canAbleBiometrichw != null && canAbleBiometrichw) {
+                biometricHelper.authUser(new RunnableArg<Boolean>() {
                     @Override
                     public void run() {
-                        ResponseMessage<UserLoginResult> responseMessage = this.getArg();
-                        if (!responseMessage.success) {
-
+                        if (this.getArg()) {
+                            if (!AuthHelper.isLoggedIn()) {
+                                loginProcess();
+                            } else {
+                                initialWebView();
+                            }
+                        } else {
+                            clearStoredUserData(true);
+                            initialWebView();
                         }
-                        progressDialog.dismiss();
-                        initialWebView();
                     }
                 });
+            } else if (!_dontaskbiometric) {
+                if (canAbleBiometrichw == null || canAbleBiometrichw) {
+                    showAlertDialog("Biyometrik Kimlik Doğrulama", "Otomatik giriş işlemini daha güvenli bir hale getirmek için biyometrik doğrulama kullanmak istermisiniz ? ", "Evet", "Bir Daha Sorma", new RunnableArg<Boolean>() {
+                        @Override
+                        public void run() {
+                            if (this.getArg()) {
+                                if (canAbleBiometrichw == null) {
+                                    biometricHelper.openFingerprintSetting();
+                                } else {
+                                    storeElement(ELEMENTID_DONTASKBIOMETRIC, "true");
+                                    storeElement(ELEMENTID_USEBIOMETRIC, "true");
+                                }
+                            } else {
+                                storeElement(ELEMENTID_DONTASKBIOMETRIC, "true");
+                                storeElement(ELEMENTID_USEBIOMETRIC, "false");
+                            }
+                            
+                            if (!AuthHelper.isLoggedIn()) {
+                                loginProcess();
+                            }
+                        }
+                    }, _mainContext);
+                }
+            } else {
+                if (!AuthHelper.isLoggedIn()) {
+                    loginProcess();
+                }
             }
         } else {
             initialWebView();
         }
 
         FirebaseInstanceId.getInstance().getInstanceId()
-            .addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
-                @Override
-                public void onComplete(@NonNull Task<InstanceIdResult> task) {
-                    if (!task.isSuccessful()) return;
+                .addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<InstanceIdResult> task) {
+                        if (!task.isSuccessful()) return;
 
-                    String fcmToken = task.getResult().getToken();
-                    AuthHelper.setFcmToken(fcmToken);
-                    AuthHelper.sendFCMTokenToServer();
-                }
-            });
+                        String fcmToken = task.getResult().getToken();
+                        AuthHelper.setFcmToken(fcmToken);
+                        AuthHelper.sendFCMTokenToServer();
+                    }
+                });
 
         initialSecurtyPersonelProcess();
         processIntent(getIntent());
         initialSwipeRefreshLayout();
+    }
+
+    private void loginProcess() {
+        if (connectionStatus.mobileConnected || connectionStatus.wifiConnected) {
+            final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this,
+                    R.style.AppTheme_Dark_Dialog);
+            progressDialog.setIndeterminate(true);
+            progressDialog.setMessage(getApplication().getResources().getString(R.string.loginprocess));
+            progressDialog.show();
+
+            AuthHelper.login(new RunnableArg<ResponseMessage<UserLoginResult>>() {
+                @Override
+                public void run() {
+                    ResponseMessage<UserLoginResult> responseMessage = this.getArg();
+                    if (!responseMessage.success) {
+                        clearStoredUserData();
+                    }
+                    progressDialog.dismiss();
+                    initialWebView();
+                }
+            });
+        } else {
+            final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this,
+                    R.style.AppTheme_Dark_Dialog);
+            progressDialog.setIndeterminate(true);
+            progressDialog.setMessage(getResources().getString(R.string.errorHttpLoad));
+            progressDialog.show();
+        }
     }
 
     @Override
@@ -191,7 +307,7 @@ public class MainActivity extends AppCompatActivity {
                     NotificationHelper.cancelNotification(this, notificationId);
                     showAlertDialog("Toplantı Katılım Teyidi", "Lütfen yeni açılacak olan pencedeki \"Toplantı Katılım Teyidi\" bölümüde bulunan \"Katılmayacağım\" butonuna tıkladıktan sonra açılan yazı alanına katılmama sebebinizi yazınız.",
                             "Tamam", null, null);
-                break;
+                    break;
                 case "sendingError":
                     showAlertDialog("Bir Sorun Oluştu", "Toplantı katılım teyidine vermiş olduğunuz cevap sisteme iletilemedi.",
                             "Daha sonra tekrar dene", "Yeniden Dene", new RunnableArg<Boolean>() {
@@ -205,7 +321,7 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                 }
                             });
-                break;
+                    break;
             }
         }
 
@@ -220,26 +336,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public static void gotoURL(String url) {
-        if (url != null && !url.isEmpty()) {
-            MainActivity.evaluateJavascriptStr("document.location = \"" + url + "\";");
-        }
-    }
-
-    // TODO: Ne kadar gerekli ?
-    public static void evaluateJavascriptStr(String evaluateString) {
-        if ((evaluateString != null) && !evaluateString.isEmpty() && webViewSMMS != null) {
-            final String finalEvaluateString = evaluateString;
-            webViewSMMS.post(new Runnable() {
-                @Override
-                public void run() {
-                    webViewSMMS.evaluateJavascript(finalEvaluateString, null);
-                }
-            });
-        }
-    }
-
-    @SuppressLint("JavascriptInterface")
+    @SuppressLint({"JavascriptInterface", "SetJavaScriptEnabled"})
     private void initialWebView() {
         webViewSMMS = findViewById(R.id.webViewSMMS);
 
@@ -275,12 +372,12 @@ public class MainActivity extends AppCompatActivity {
                 String signoutURL = webSiteURL + "/#!/login/signout";
 
                 if (email.length() > 0 && password.length() > 0 && url.equals(signinURL)) {
-                    view.evaluateJavascript("javascript:window.actions.initLoginForAndroid('" + email+ "' , '"+ password +"') ; ", null);
+                    view.evaluateJavascript("javascript:window.actions.initLoginForAndroid('" + email + "' , '" + password + "') ; ", null);
                 } else if (url.equals(signoutURL)) {
                     clearStoredUserData();
                 } else if (url.equals(profilePageURL)) {
                     User userInfo = AuthHelper.getUserInfo();
-                    if (userInfo.role.equals("SECURITY")) {
+                    if (userInfo.role.equals("SECURITYDEBUG")) {
                         if (connectionStatus.mobileConnected) {
                             forceWifiConnection(getResources().getString(R.string.denymobileconnection));
                         } else if (connectionStatus.wifiConnected) {
@@ -298,7 +395,7 @@ public class MainActivity extends AppCompatActivity {
                                                 StaffCard _staffCard = AuthHelper.getStaffCardFromServer();
                                                 if (_staffCard != null) {
                                                     boolean checkSSID = false;
-                                                    for (String _ssid :_staffCard.acceptableSSIDs) {
+                                                    for (String _ssid : _staffCard.acceptableSSIDs) {
                                                         checkSSID |= _ssid.equals(connectionStatus.SSID);
                                                     }
 
@@ -342,9 +439,31 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
+            @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.getMethod().equals("GET") && request.getUrl().toString().startsWith(webSiteURL) && error.getErrorCode() == -2) {
+                    MainActivity.evaluateJavascriptStr("document.body.innerHTML = \"<span></span>\";");
+                    final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this,
+                            R.style.AppTheme_Dark_Dialog);
+                    progressDialog.setIndeterminate(true);
+                    progressDialog.setMessage(getResources().getString(R.string.errorHttpLoad));
+                    progressDialog.show();
+                }
                 super.onReceivedError(view, request, error);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    MainActivity.evaluateJavascriptStr("document.body.innerHTML = \"<span></span>\";");
+                    final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this,
+                            R.style.AppTheme_Dark_Dialog);
+                    progressDialog.setIndeterminate(true);
+                    progressDialog.setMessage(getResources().getString(R.string.errorHttpLoad));
+                    progressDialog.show();
+                }
+                super.onReceivedError(view, errorCode, description, failingUrl);
             }
         });
 
@@ -397,9 +516,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // TODO: remove setWebContentsDebuggingEnabled
         // WebView.setWebContentsDebuggingEnabled(true);
-
         webViewSMMS.getSettings().setAppCachePath(this.getApplicationContext().getCacheDir().getAbsolutePath() + "/cache");
         webViewSMMS.getSettings().setDatabaseEnabled(true);
         webViewSMMS.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
@@ -409,7 +526,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
                 String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
-                if(url.startsWith("blob")) {
+                if (url.startsWith("blob")) {
                     webViewSMMS.loadUrl(FileHelper.getBase64StringFromBlobUrl(url, fileName, mimeType));
                 } else {
 
@@ -424,7 +541,7 @@ public class MainActivity extends AppCompatActivity {
         webViewSMMS.getSettings().setAllowContentAccess(true);
         webViewSMMS.getSettings().setAllowFileAccessFromFileURLs(true);
         if (AuthHelper.isLoggedIn()) {
-            webViewSMMS.loadUrl(MainActivity.webSiteURL);
+            webViewSMMS.loadUrl(MainActivity.webSiteURL + "/#!/login/fastlogin/" + AuthHelper.getApiToken());
         } else {
             String landingPageURL = webSiteURL + "/#!/landing/welcome";
             webViewSMMS.loadUrl(landingPageURL);
@@ -458,9 +575,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
-    /// Permission Stage
-    private static final int MY_PERMISSION_REQUEST_CODE = 123;
 
     protected void checkPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -610,7 +724,6 @@ public class MainActivity extends AppCompatActivity {
         MainActivity.this.startActivityForResult(Intent.createChooser(i, "File Browser"), FILECHOOSER_RESULTCODE);
     }
 
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         super.onActivityResult(requestCode, resultCode, intent);
@@ -669,41 +782,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void clearStoredUserData() {
-        SharedPreferences.Editor edit = getApplicationContext().getSharedPreferences(MainActivity.packageId,Activity.MODE_PRIVATE).edit();
+        clearStoredUserData(false);
+    }
+
+    private void clearStoredUserData(Boolean allDelete) {
+        String dontAskMeBiometric = sharedPreferences.getString(ELEMENTID_DONTASKBIOMETRIC, "false");
+        SharedPreferences.Editor edit = sharedPreferences.edit();
         edit.clear();
+        if (!allDelete) {
+            edit.putString(ELEMENTID_DONTASKBIOMETRIC, dontAskMeBiometric);
+        }
         edit.apply();
     }
 
-    private void showAlertDialog (String title, String message, String okButtonText, String cancelButtonText, final RunnableArg<Boolean> runnableArg) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(title);
-        builder.setMessage(message);
+    private void showAlertDialog(String title, String message, String okButtonText, String cancelButtonText, final RunnableArg<Boolean> runnableArg) {
+        showAlertDialog(title, message, okButtonText, cancelButtonText, runnableArg, this);
+    }
 
-        if (okButtonText != null) {
-            builder.setPositiveButton(okButtonText, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                    if (runnableArg != null) {
-                        runnableArg.run(true);
-                    }
-                }
-            });
-        }
-
-        if (cancelButtonText != null) {
-            builder.setNeutralButton(cancelButtonText, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                    if (runnableArg != null) {
-                        runnableArg.run(false);
-                    }
-                }
-            });
-        }
-
-        if (okButtonText != null || cancelButtonText != null) {
-            AlertDialog dialog = builder.create();
-            dialog.show();
-        }
+    private void storeElement(String id, String element) {
+        SharedPreferences.Editor edit = sharedPreferences.edit();
+        edit.putString(id, element);
+        edit.apply();
     }
 }

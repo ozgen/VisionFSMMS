@@ -7,17 +7,28 @@ import android.content.SharedPreferences;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.shoppingmall.smms.Helpers.AuthHelper;
+import com.shoppingmall.smms.Helpers.BiometricHelperBase;
 import com.shoppingmall.smms.Helpers.FileHelper;
 import com.shoppingmall.smms.Models.ResponseMessage;
 import com.shoppingmall.smms.Models.UserLoginResult;
 
 import java.io.IOException;
+import java.util.Objects;
+
+import static com.shoppingmall.smms.MainActivity.ELEMENTID_DONTASKBIOMETRIC;
+import static com.shoppingmall.smms.MainActivity.ELEMENTID_USEBIOMETRIC;
 
 public class WebAppInterface {
     Context mContext;
+    SharedPreferences sharedPreferences;
+    Boolean dontaskbiometric = false;
+    Boolean usebiometric = false;
 
     WebAppInterface(Context c) {
+        sharedPreferences = c.getSharedPreferences(MainActivity.packageId, Activity.MODE_PRIVATE);
         mContext = c;
     }
 
@@ -30,6 +41,7 @@ public class WebAppInterface {
             storeElement(MainActivity.ELEMENTID_USERID, userID);
             storeElement(MainActivity.ELEMENTID_EMAIL, email);
             storeElement(MainActivity.ELEMENTID_PASSWORD, password);
+            final BiometricHelperBase biometricHelper = BiometricHelperBase.getInstance((AppCompatActivity) mContext);
 
             if (!AuthHelper.isLoggedIn()) {
                 final ProgressDialog progressDialog = new ProgressDialog(mContext,
@@ -38,13 +50,38 @@ public class WebAppInterface {
                 progressDialog.setMessage(mContext.getResources().getString(R.string.loginRedirect));
                 progressDialog.show();
 
+                refreshVariables();
+
                 AuthHelper.login(new RunnableArg<ResponseMessage<UserLoginResult>>() {
                     @Override
                     public void run() {
                         ResponseMessage<UserLoginResult> responseMessage = this.getArg();
                         if (responseMessage.success) {
                             AuthHelper.sendFCMTokenToServer();
+                            final Boolean canAbleBiometricHw = biometricHelper.checkBiometricHardware();
+
+                            if (!dontaskbiometric) {
+                                if (canAbleBiometricHw == null || canAbleBiometricHw == true) {
+                                    MainActivity.showAlertDialog("Biyometrik Kimlik Doğrulama", "Otomatik giriş işlemini daha güvenli bir hale getirmek için biyometrik doğrulama kullanmak istermisiniz ? ", "Evet", "Bir Daha Sorma", new RunnableArg<Boolean>() {
+                                        @Override
+                                        public void run() {
+                                            if (this.getArg()) {
+                                                if (canAbleBiometricHw == null) {
+                                                    biometricHelper.openFingerprintSetting();
+                                                } else {
+                                                    storeElement(ELEMENTID_DONTASKBIOMETRIC, "true");
+                                                    storeElement(ELEMENTID_USEBIOMETRIC, "true");
+                                                }
+                                            } else {
+                                                storeElement(ELEMENTID_DONTASKBIOMETRIC, "true");
+                                                storeElement(ELEMENTID_USEBIOMETRIC, "false");
+                                            }
+                                        }
+                                    }, mContext);
+                                }
+                            }
                         }
+
                         MainActivity.gotoURL(MainActivity.urlStr);
                         progressDialog.dismiss();
                     }
@@ -105,15 +142,24 @@ public class WebAppInterface {
         FileHelper.convertBase64StringToFileAndStoreIt(mContext, base64Data, fileName, mimeType);
     }
 
+    private void refreshVariables() {
+        dontaskbiometric = Objects.equals(sharedPreferences.getString(ELEMENTID_DONTASKBIOMETRIC, "false"), "true");
+        usebiometric = Objects.equals(sharedPreferences.getString(ELEMENTID_USEBIOMETRIC, "false"), "true");
+    }
+
     private void storeElement(String id, String element) {
-        SharedPreferences.Editor edit = ((MainActivity) mContext).getSharedPreferences(MainActivity.packageId, Activity.MODE_PRIVATE).edit();
+        SharedPreferences.Editor edit = sharedPreferences.edit();
         edit.putString(id, element);
-        edit.commit();
+        edit.apply();
     }
 
     private void clearStoredUserData() {
-        SharedPreferences.Editor edit = ((MainActivity) mContext).getSharedPreferences(MainActivity.packageId,Activity.MODE_PRIVATE).edit();
+        refreshVariables();
+        SharedPreferences.Editor edit = sharedPreferences.edit();
         edit.clear();
-        edit.commit();
+        if (dontaskbiometric && !usebiometric) {
+            edit.putString(ELEMENTID_DONTASKBIOMETRIC, "true");
+        }
+        edit.apply();
     }
 }

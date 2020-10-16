@@ -91,8 +91,7 @@ public class FileHelper {
                             return null;
                         }
                     }.execute();
-                }
-                else {
+                } else {
                     Toast.makeText(_mainContext, Resources.getSystem().getString(R.string.downloadFail), Toast.LENGTH_LONG).show();
                 }
             }

@@ -34,11 +34,13 @@ public class AuthHelper {
         return _isLoggedIn;
     }
 
+    public static String getUserID() {
+        return userID;
+    }
+
     public static void setUserID(String userID) {
         AuthHelper.userID = userID;
     }
-
-    public static String getUserID() { return userID; }
 
     public static void setUserEmail(String userEmail) {
         AuthHelper.userEmail = userEmail;
@@ -48,8 +50,8 @@ public class AuthHelper {
         AuthHelper.password = password;
     }
 
-    public static void setApiToken(String token) {
-        AuthHelper.apiToken = token;
+    public static String getApiToken() {
+        return AuthHelper.apiToken;
     }
 
     public static String getFcmToken() {
@@ -60,7 +62,9 @@ public class AuthHelper {
         AuthHelper.fcmToken = fcmToken;
     }
 
-    public static User getUserInfo() { return userInfo; }
+    public static User getUserInfo() {
+        return userInfo;
+    }
 
     public static String getSessionInjectScript() {
         return sessionInjectScript;
@@ -72,15 +76,15 @@ public class AuthHelper {
 
     public static void login(final RunnableArg<ResponseMessage<UserLoginResult>> runnableArg) {
         VisionfService visionfService = ApiClient.getClient();
-        Call<UserLoginResult> call = visionfService.login(new UserLogin(userEmail, password));;
+        Call<UserLoginResult> call = visionfService.login(new UserLogin(userEmail, password));
 
         call.enqueue(new Callback<UserLoginResult>() {
             @Override
             public void onResponse(Call<UserLoginResult> call, retrofit2.Response<UserLoginResult> response) {
+                ResponseMessage<UserLoginResult> runnableRes = new ResponseMessage<>();
                 int responseCode = response.code();
                 if (responseCode == 200) {
                     UserLoginResult apiResponse = response.body();
-                    ResponseMessage<UserLoginResult> runnableRes = new ResponseMessage<>();
                     runnableRes.success = false;
                     if (apiResponse != null && apiResponse.success) {
                         _isLoggedIn = true;
@@ -93,6 +97,8 @@ public class AuthHelper {
                         runnableArg.run(runnableRes);
                         return;
                     }
+                } else {
+                    runnableArg.run(runnableRes);
                 }
 
                 _isLoggedIn = false;
@@ -115,33 +121,32 @@ public class AuthHelper {
         fcmToken = null;
         userInfo = null;
         sessionInjectScript = null;
+        _isLoggedIn = false;
     }
 
-    public static boolean sendFCMTokenToServer() {
+    public static void sendFCMTokenToServer() {
         if (fcmToken != null && _isLoggedIn) {
             VisionfService visionfService = ApiClient.getClient();
+            Call<ResponseMessage<String>> call = visionfService.sendFCMTokenToServer(new FCMToken(userID, fcmToken, null));
 
-            Call<ResponseMessage<String>> callSync = visionfService.sendFCMTokenToServer(new FCMToken( userID, fcmToken, null));
+            call.enqueue(new Callback<ResponseMessage<String>>() {
+                @Override
+                public void onResponse(Call<ResponseMessage<String>> call, Response<ResponseMessage<String>> response) {
 
-            try {
-                Response<ResponseMessage<String>> response = callSync.execute();
-                ResponseMessage<String> apiResponse = response.body();
-
-                if (response.code() == 200 && apiResponse != null) {
-                    return true;
                 }
-            } catch (Exception ex) {
-                Log.e("AuthHelper", ex.getMessage() != null ? ex.getMessage() : "Null");
-            }
-        }
 
-        return false;
+                @Override
+                public void onFailure(Call<ResponseMessage<String>> call, Throwable t) {
+
+                }
+            });
+        }
     }
 
     public static void getUserDataFromServer() {
-        if(!userID.isEmpty() && _isLoggedIn) {
+        if (!userID.isEmpty() && _isLoggedIn) {
             VisionfService _visionfService = ApiClient.getClient();
-            Call<ResponseMessage<User>> call = _visionfService.getUserData(userID);
+            Call<ResponseMessage<User>> call = _visionfService.getUserData();
 
             call.enqueue(new Callback<ResponseMessage<User>>() {
                 @Override

@@ -21,6 +21,7 @@ public class QRCodeHelper {
     private int mMargin;
     private String mContent;
     private int mWidth, mHeight;
+
     /**
      * private constructor of this class only access by stying in this class.
      */
@@ -28,6 +29,7 @@ public class QRCodeHelper {
         mHeight = (int) (context.getResources().getDisplayMetrics().heightPixels / 3.12);
         mWidth = (int) (context.getResources().getDisplayMetrics().widthPixels / 1.69);
     }
+
     /**
      * This method is for singleton instance od this class.
      *
@@ -39,6 +41,7 @@ public class QRCodeHelper {
         }
         return qrCodeHelper;
     }
+
     /**
      * This method is called generate function who generate the qrcode and return it.
      *
@@ -47,6 +50,7 @@ public class QRCodeHelper {
     public Bitmap getQRCOde() {
         return generate();
     }
+
     /**
      * Simply setting the correctionLevel to qrcode.
      *
@@ -57,6 +61,7 @@ public class QRCodeHelper {
         mErrorCorrectionLevel = level;
         return this;
     }
+
     /**
      * Simply setting the encrypted to qrcode.
      *
@@ -67,6 +72,7 @@ public class QRCodeHelper {
         mContent = content;
         return this;
     }
+
     /**
      * Simply setting the width and height for qrcode.
      *
@@ -79,6 +85,7 @@ public class QRCodeHelper {
         mHeight = height;
         return this;
     }
+
     /**
      * Simply setting the margin for qrcode.
      *
@@ -89,6 +96,7 @@ public class QRCodeHelper {
         mMargin = margin;
         return this;
     }
+
     /**
      * Generate the qrcode with giving the properties.
      *

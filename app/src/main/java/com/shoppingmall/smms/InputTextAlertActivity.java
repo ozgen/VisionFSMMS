@@ -2,7 +2,6 @@ package com.shoppingmall.smms;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -85,9 +84,9 @@ public class InputTextAlertActivity extends Activity {
         super.onNewIntent(intent);
     }
 
-    private void showAlertDialogWithInputText (final String title, final String message, final String okButtonText, final String cancelButtonText, final RunnableArg<ResponseMessage<String>> runnableArg) {
+    private void showAlertDialogWithInputText(final String title, final String message, final String okButtonText, final String cancelButtonText, final RunnableArg<ResponseMessage<String>> runnableArg) {
 
-        AlertDialog.Builder builder  = new AlertDialog.Builder(this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(title);
         builder.setMessage(message);
 
@@ -130,7 +129,7 @@ public class InputTextAlertActivity extends Activity {
         }
     }
 
-    private void openIntentWithUrlExtra (Context c, Class cls, Bundle bundle, String actionCode) {
+    private void openIntentWithUrlExtra(Context c, Class cls, Bundle bundle, String actionCode) {
         if (actionCode == null) actionCode = "loginRequired";
         Intent intent = new Intent(c, cls);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

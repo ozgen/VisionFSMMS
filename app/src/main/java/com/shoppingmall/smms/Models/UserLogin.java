@@ -12,12 +12,16 @@ public class UserLogin {
     @Expose
     public String password;
 
+    @SerializedName("rememberMe")
+    @Expose
+    public Boolean rememberMe = false;
+
     public UserLogin() {
 
     }
 
     public UserLogin(String userEmail, String userPassword) {
         this.email = userEmail;
-        this.password =userPassword;
+        this.password = userPassword;
     }
 }

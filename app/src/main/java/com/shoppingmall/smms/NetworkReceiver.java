@@ -12,13 +12,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 class NetworkReceiver extends BroadcastReceiver {
-    private Activity _activity;
     protected static List<RunnableArg> subscribers = new ArrayList<>();
+    private Activity _activity;
 
-    public NetworkReceiver() { }
+    public NetworkReceiver() {
+    }
 
     public NetworkReceiver(Activity activity) {
         _activity = activity;
+    }
+
+    public static void addConnectionTypeChangeListener(RunnableArg _runnable) {
+        subscribers.add(_runnable);
     }
 
     @Override
@@ -27,11 +32,7 @@ class NetworkReceiver extends BroadcastReceiver {
         this.emitAllSubscribers(connectionStatus);
     }
 
-    public static void addConnectionTypeChangeListener(RunnableArg _runnable) {
-        subscribers.add(_runnable);
-    }
-
-    private void emitAllSubscribers (ConnectionStatus connectionStatus) {
+    private void emitAllSubscribers(ConnectionStatus connectionStatus) {
         for (RunnableArg runnable : subscribers) {
             runnable.run(connectionStatus);
         }

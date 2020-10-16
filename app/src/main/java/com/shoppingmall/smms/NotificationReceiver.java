@@ -28,7 +28,8 @@ public class NotificationReceiver extends BroadcastReceiver {
         newIntent.putExtras(intent.getExtras());
 
         if (reply != null) newIntent.putExtra("reply", reply);
-        if (actionNotification != null) newIntent.putExtra("actionNotification", actionNotification);
+        if (actionNotification != null)
+            newIntent.putExtra("actionNotification", actionNotification);
 
         context.startService(newIntent);
     }

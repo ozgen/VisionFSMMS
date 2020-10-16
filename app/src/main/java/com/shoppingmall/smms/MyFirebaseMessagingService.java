@@ -34,7 +34,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String _msgUrl = remoteMessage.getData().get("url");
         String _msgType = remoteMessage.getData().get("type");
 
-        if (_msgType == null) { _msgType = "standart"; }
+        if (_msgType == null) {
+            _msgType = "standart";
+        }
 
         if (_msgType.equals("invite")) {
             Map<String, String> datas = remoteMessage.getData();
@@ -56,7 +58,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     .setContentText(remoteMessage.getNotification().getBody())
                     .setStyle(bigTextStyle)
                     .setSmallIcon(R.mipmap.ic_launcher)
-                    .setColor(Integer.parseInt("FFFFFF",16))
+                    .setColor(Integer.parseInt("FFFFFF", 16))
                     .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
                     .setContentIntent(contentIntent)
                     .setAutoCancel(true)

@@ -23,11 +23,12 @@ import java.util.Set;
 
 public class NotificationHelper {
     private static int notificationCount = 0;
+
     public static int getNotificationCount() {
         return ++notificationCount;
     }
 
-    public static void showInviteNotification (Context c, Map<String, String> notificationData) {
+    public static void showInviteNotification(Context c, Map<String, String> notificationData) {
 
         Integer notificationID = getNotificationCount();
 
@@ -37,7 +38,7 @@ public class NotificationHelper {
         String notificationContent = notificationData.get("content");
 
         Bundle bundle = new Bundle();
-        for (Map.Entry<String,String> entry : notificationData.entrySet()) {
+        for (Map.Entry<String, String> entry : notificationData.entrySet()) {
             bundle.putString(entry.getKey(), entry.getValue());
         }
 
@@ -45,8 +46,7 @@ public class NotificationHelper {
         bigTextStyle.setBigContentTitle(title);
         bigTextStyle.bigText(notificationContent);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-        {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager mNotificationManager =
                     (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
             String channelId = "Invite";
@@ -104,7 +104,7 @@ public class NotificationHelper {
             //Create Notification.
             NotificationManager notificationManager = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
 
-            notificationManager.notify(notificationID ,builder.build());
+            notificationManager.notify(notificationID, builder.build());
         } else {
 
             Intent acceptIntent = new Intent(c, NotificationReceiver.class);

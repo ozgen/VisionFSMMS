@@ -24,8 +24,8 @@ public interface VisionfService {
     @POST("api/security/getUserPassCard")
     Call<StaffCard> getUserPassCard(@Body UserMacAddress user);
 
-    @GET("api/getUserData/{userId}")
-    Call<ResponseMessage<User>> getUserData(@Path("userId") String userID);
+    @GET("api/getUserData")
+    Call<ResponseMessage<User>> getUserData();
 
     @POST("api/security/macaddress")
     Call<ResponseMessage<String>> createMacAddress(@Body UserMacAddress user);
